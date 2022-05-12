@@ -1,0 +1,16 @@
+sample:
+  description: Golioth Thread sample with OpenThread and IPv6
+  name: openthread
+
+common:
+  platform_allow: nrf5340dk_nrf5340_cpuapp nrf5340dk_nrf5340_cpuapp_ns nrf52840dk_nrf52840 nrf52833dk_nrf52833 nrf21540dk_nrf52840
+  tags: golioth net socket thread
+  integration_platforms:
+    - nrf5340dk_nrf5340_cpuapp
+    - nrf5340dk_nrf5340_cpuapp_ns
+    - nrf52840dk_nrf52840
+    - nrf52833dk_nrf52833
+    - nrf21540dk_nrf52840
+
+tests:
+  sample.golioth.openthread
