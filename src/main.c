@@ -17,7 +17,7 @@ LOG_MODULE_REGISTER(main, CONFIG_GOLIOTH_THREAD_LOG_LEVEL);
 #define CONSOLE_LABEL DT_LABEL(DT_CHOSEN(zephyr_console))
 #define OT_CONNECTION_LED DK_LED2
 
-int sensor_interval = 300;
+int sensor_interval = 30;
 
 struct device *sensor;
 
@@ -71,7 +71,7 @@ K_WORK_DEFINE(my_stream_work, my_stream_work_handler);
 void my_sensor_work_handler(struct k_work *work)
 {
 
-	LOG_DBG("Taking sensor readings (placeholder)\n");
+	LOG_DBG("Taking sensor readings (placeholder)");
 
 	dk_set_led_on(DK_LED1);
 
