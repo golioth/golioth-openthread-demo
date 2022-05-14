@@ -18,6 +18,7 @@ LOG_MODULE_REGISTER(main, CONFIG_GOLIOTH_THREAD_LOG_LEVEL);
 #define OT_CONNECTION_LED DK_LED2
 
 int sensor_interval = 30;
+int counter = 0;
 
 struct device *sensor;
 
@@ -47,12 +48,21 @@ static void golioth_on_message(struct golioth_client *client,
 void my_stream_work_handler(struct k_work *work)
 {
 	int err;
-	LOG_DBG("Transmitting to Golioth over LightDB Stream");
+	struct sensor_value temp;
+	char temp_string[sizeof("4294967295")];
+	
+	// kick off a sensor reading!
+	sensor_sample_fetch(sensor);
+	sensor_channel_get(sensor, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+	LOG_DBG("Temp is %d.%06d", temp.val1, abs(temp.val2));
+
+	snprintk(temp_string, sizeof(temp_string) - 1, "%d.%06d", temp.val1, abs(temp.val2));
+
 	err = golioth_lightdb_set(client,
 					  GOLIOTH_LIGHTDB_STREAM_PATH("temp"),
 					  COAP_CONTENT_FORMAT_TEXT_PLAIN,
-					  "\"four!!!\"",
-					  strlen("\"four!!!\""));
+					  temp_string,
+					  strlen(temp_string));
 	if (err) {
 		LOG_WRN("Failed to send temperature: %d", err);
 		printk("Failed to send temperature: %d\n", err);	
@@ -84,7 +94,24 @@ K_WORK_DEFINE(my_sensor_work, my_sensor_work_handler);
 
 void my_timer_handler(struct k_timer *dummy) {
 
-	LOG_DBG("Interval of %d seconds is up, taking a reading now!", sensor_interval);
+	char sbuf[sizeof("4294967295")];
+	int err;
+
+	snprintk(sbuf, sizeof(sbuf) - 1, "%d", counter);
+
+	LOG_DBG("Interval of %d seconds is up, updating state and taking a reading", sensor_interval);
+	
+	err = golioth_lightdb_set(client,
+				  GOLIOTH_LIGHTDB_PATH("number_of_timed_updates"),
+				  COAP_CONTENT_FORMAT_TEXT_PLAIN,
+				  sbuf, strlen(sbuf));
+	if (err) {
+		LOG_WRN("Failed to update counter: %d", err);
+	}
+	
+	counter++;
+
+
 	k_work_submit(&my_sensor_work);
 
 }
@@ -117,7 +144,6 @@ static void on_button_changed(uint32_t button_state, uint32_t has_changed)
 	if ((buttons & DK_BTN1_MSK) && button_state == 1) {
 		golioth_send_hello(client); 
 		LOG_DBG("Button %d pressed, taking a reading now!", has_changed);
-		// After sending logging message, kick off a sensor reading!
 		k_work_submit(&my_sensor_work);
 	}
 
