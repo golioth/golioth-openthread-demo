@@ -95,8 +95,10 @@ Both of the above methods builds for `the Laird BT510 <https://www.lairdconnect.
 
 Flash your board 
 ================
+
 .. code-block:: console
-   west flash
+
+    west flash
 
 Note, this requires a board with a debugger, either on-board or on an external platform. 
 
