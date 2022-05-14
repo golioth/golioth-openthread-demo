@@ -67,12 +67,38 @@ by changing these lines in the ``prj.conf`` configuration file, e.g.:
 Build and Flash
 ***************
 
+Recommended build method
+========================
+
+There is a file called ``credentials.conf_example`` in this repo. Rename this to ``credentials.conf``. 
+Place to your Golioth credentials from the Console in here (PSK/PSK_ID).
+
+This is the recommended path because any subsequent commit to the repo (or a forked repo) will not push your
+credentials to the git server. This requires a special command at build time.
+
+.. code-block:: console
+
+    west build -b bt510 app -D OVERLAY_CONFIG=credentials.conf
+
+Alternative build method
+========================
+
+Some people prefer to use the prj.conf file to store their credentials. Understand this is a higher risk of exposing
+your credentials in a repo. 
+
 .. code-block:: console
     
     west build -b bt510 app
-    west flash
 
-The above builds for the BT510, but has also worked on the Nordic nRF52840-DK
+
+Both of the above methods builds for `the Laird BT510 <https://www.lairdconnect.com/iot-devices/iot-sensors/bt510-bluetooth-5-long-range-ip67-multi-sensor>`_., but has also worked on the `Nordic nRF52840-DK <https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dk>`_.
+
+Flash your board 
+================
+.. code-block:: console
+   west flash
+
+Note, this requires a board with a debugger, either on-board or on an external platform. 
 
 
 Additional Steps For Runing on nRF52840 USB Dongle
