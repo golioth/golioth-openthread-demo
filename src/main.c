@@ -12,7 +12,7 @@
 #include <drivers/sensor.h>
 #include <device.h>
 
-LOG_MODULE_REGISTER(main, CONFIG_GOLIOTH_THREAD_LOG_LEVEL);
+LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 #define CONSOLE_LABEL DT_LABEL(DT_CHOSEN(zephyr_console))
 #define OT_CONNECTION_LED DK_LED2
@@ -20,7 +20,8 @@ LOG_MODULE_REGISTER(main, CONFIG_GOLIOTH_THREAD_LOG_LEVEL);
 int sensor_interval = 30;
 int counter = 0;
 
-struct device *sensor;
+struct device *temp_sensor;
+struct device *imu_sensor;
 
 static struct k_work on_connect_work;
 static struct k_work on_disconnect_work;
@@ -49,11 +50,14 @@ void my_stream_work_handler(struct k_work *work)
 {
 	int err;
 	struct sensor_value temp;
+	struct sensor_value accel_x;
+	struct sensor_value accel_y;
+	struct sensor_value accel_z;
 	char temp_string[sizeof("4294967295")];
 	
-	// kick off a sensor reading!
-	sensor_sample_fetch(sensor);
-	sensor_channel_get(sensor, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+	// kick off a temp sensor reading!
+	sensor_sample_fetch(temp_sensor);
+	sensor_channel_get(temp_sensor, SENSOR_CHAN_AMBIENT_TEMP, &temp);
 	LOG_DBG("Temp is %d.%06d", temp.val1, abs(temp.val2));
 
 	snprintk(temp_string, sizeof(temp_string) - 1, "%d.%06d", temp.val1, abs(temp.val2));
@@ -67,6 +71,29 @@ void my_stream_work_handler(struct k_work *work)
 		LOG_WRN("Failed to send temperature: %d", err);
 		printk("Failed to send temperature: %d\n", err);	
 	}
+
+	// kick off a temp sensor reading!
+	sensor_sample_fetch(imu_sensor);
+	sensor_channel_get(imu_sensor, SENSOR_CHAN_ACCEL_X, &accel_x);
+	LOG_DBG("Accel X is %d.%06d", accel_x.val1, abs(accel_x.val2));
+	sensor_channel_get(imu_sensor, SENSOR_CHAN_ACCEL_Y, &accel_y);
+	LOG_DBG("Accel Y is %d.%06d", accel_y.val1, abs(accel_y.val2));	
+	sensor_channel_get(imu_sensor, SENSOR_CHAN_ACCEL_Z, &accel_z);
+	LOG_DBG("Accel Z is %d.%06d", accel_z.val1, abs(accel_z.val2));	
+
+	// snprintk(imu_string, sizeof(temp_string) - 1, "%d.%06d", temp.val1, abs(temp.val2));
+
+	// err = golioth_lightdb_set(client,
+	// 				  GOLIOTH_LIGHTDB_STREAM_PATH("temp"),
+	// 				  COAP_CONTENT_FORMAT_TEXT_PLAIN,
+	// 				  temp_string,
+	// 				  strlen(temp_string));
+	// if (err) {
+	// 	LOG_WRN("Failed to send temperature: %d", err);
+	// 	printk("Failed to send temperature: %d\n", err);	
+	// }
+
+	
 	dk_set_led_off(DK_LED1);
 	//LOG_DBG("Done sending to Golioth LightDB Stream\n");
 }
@@ -223,10 +250,17 @@ void main(void)
 		return;
 	}
 
-	sensor = (void *)DEVICE_DT_GET_ANY(silabs_si7055);
+	temp_sensor = (void *)DEVICE_DT_GET_ANY(silabs_si7055);
 
-    if (sensor == NULL) {
+    if (temp_sensor == NULL) {
         printk("Could not get si7055 device\n");
+        return;
+    }
+
+	imu_sensor = (void *)DEVICE_DT_GET_ANY(st_lis2dh12);
+
+    if (imu_sensor == NULL) {
+        printk("Could not get lis2dh12 device\n");
         return;
     }
 
