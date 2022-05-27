@@ -12,6 +12,10 @@
 #include <drivers/sensor.h>
 #include <device.h>
 
+#include <init.h>
+
+
+
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 #define CONSOLE_LABEL DT_LABEL(DT_CHOSEN(zephyr_console))

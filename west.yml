@@ -35,7 +35,7 @@ manifest:
     # Golioth repository.
     - name: golioth
       path: deps/modules/lib/golioth
-      revision: cc758432ba31ce5d896ad8ebf3118575150a4359
+      revision: main
       url: https://github.com/golioth/zephyr-sdk.git
 
     # QCBOR
