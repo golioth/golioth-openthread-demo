@@ -17,9 +17,9 @@ Requirements
 - Thread network name and PSK key
 - `The Laird BT510 <https://www.lairdconnect.com/iot-devices/iot-sensors/bt510-bluetooth-5-long-range-ip67-multi-sensor>`_.  
 
-This demo can also worked on the `Nordic nRF52840-DK <https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dk>`_., but will not have on-board sensors.
+This demo can also work on the `Nordic nRF52840-DK <https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dk>`_, but will not have on-board sensors. All build commands will explicitly call out the BT510.
 
-There are additional instructions around setting up RCP and OTBR on `our documentation page<https://golioth.github.io/golioth-openthread-demo-docs>`_.
+There are additional instructions around setting up RCP and OTBR on `our documentation page <https://golioth.github.io/golioth-openthread-demo-docs>`_.
 
 Usage
 *****
@@ -77,7 +77,7 @@ Build and Flash
 
 Note, this requires a board with a debugger, either on-board or on an external platform. 
 
-For the Laird BT510, you will need the `Laird SWD USB programming kit<https://www.lairdconnect.com/wireless-modules/programming-kits/usb-swd-programming-kit>`_.
+For the Laird BT510, you will need the `Laird SWD USB programming kit <https://www.lairdconnect.com/wireless-modules/programming-kits/usb-swd-programming-kit>`_.
 
 Provision
 =========
