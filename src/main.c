@@ -21,11 +21,12 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 #define CONSOLE_LABEL DT_LABEL(DT_CHOSEN(zephyr_console))
 #define OT_CONNECTION_LED DK_LED2
 
-int sensor_interval = 30;
+int sensor_interval = 60;
 int counter = 0;
 
 struct device *temp_sensor;
 struct device *imu_sensor;
+struct device *mag_sensor;
 
 static struct k_work on_connect_work;
 static struct k_work on_disconnect_work;
@@ -50,59 +51,66 @@ static void golioth_on_message(struct golioth_client *client,
 // This work function will submit a LightDB Stream output
 // It should be called every time the sensor takes a reading
 
-void my_stream_work_handler(struct k_work *work)
+void my_sensorstream_work_handler(struct k_work *work)
 {
 	int err;
 	struct sensor_value temp;
 	struct sensor_value accel_x;
 	struct sensor_value accel_y;
 	struct sensor_value accel_z;
-	char temp_string[sizeof("4294967295")];
+	struct sensor_value mag;
+	char sbuf[100];
 	
 	// kick off a temp sensor reading!
 	sensor_sample_fetch(temp_sensor);
 	sensor_channel_get(temp_sensor, SENSOR_CHAN_AMBIENT_TEMP, &temp);
 	LOG_DBG("Temp is %d.%06d", temp.val1, abs(temp.val2));
 
-	snprintk(temp_string, sizeof(temp_string) - 1, "%d.%06d", temp.val1, abs(temp.val2));
-
-	err = golioth_lightdb_set(client,
-					  GOLIOTH_LIGHTDB_STREAM_PATH("temp"),
-					  COAP_CONTENT_FORMAT_TEXT_PLAIN,
-					  temp_string,
-					  strlen(temp_string));
-	if (err) {
-		LOG_WRN("Failed to send temperature: %d", err);
-		printk("Failed to send temperature: %d\n", err);	
-	}
-
-	// kick off a temp sensor reading!
+	// kick off an IMU sensor reading!
 	sensor_sample_fetch(imu_sensor);
 	sensor_channel_get(imu_sensor, SENSOR_CHAN_ACCEL_X, &accel_x);
 	LOG_DBG("Accel X is %d.%06d", accel_x.val1, abs(accel_x.val2));
 	sensor_channel_get(imu_sensor, SENSOR_CHAN_ACCEL_Y, &accel_y);
 	LOG_DBG("Accel Y is %d.%06d", accel_y.val1, abs(accel_y.val2));	
 	sensor_channel_get(imu_sensor, SENSOR_CHAN_ACCEL_Z, &accel_z);
-	LOG_DBG("Accel Z is %d.%06d", accel_z.val1, abs(accel_z.val2));	
+	LOG_DBG("Accel Z is %d.%06d", accel_z.val1, abs(accel_z.val2));
 
-	// snprintk(imu_string, sizeof(temp_string) - 1, "%d.%06d", temp.val1, abs(temp.val2));
 
-	// err = golioth_lightdb_set(client,
-	// 				  GOLIOTH_LIGHTDB_STREAM_PATH("temp"),
-	// 				  COAP_CONTENT_FORMAT_TEXT_PLAIN,
-	// 				  temp_string,
-	// 				  strlen(temp_string));
-	// if (err) {
-	// 	LOG_WRN("Failed to send temperature: %d", err);
-	// 	printk("Failed to send temperature: %d\n", err);	
-	// }
+	// kick off a mag sensor reading!
+	sensor_sample_fetch(mag_sensor);
+	sensor_channel_get(mag_sensor, SENSOR_CHAN_PROX, &mag);
+	LOG_DBG("Mag is %d.%06d", mag.val1, abs(mag.val2));
 
-	
+
+	snprintk(sbuf, sizeof(sbuf) - 1,
+			"{\"accel_x\":%f,\"accel_y\":%f,\"accel_z\":%f,\"mag\":%f,\"temp\":%f}",
+			sensor_value_to_double(&accel_x),
+			sensor_value_to_double(&accel_y),
+			sensor_value_to_double(&accel_z),
+			sensor_value_to_double(&mag),
+			sensor_value_to_double(&temp)
+			);
+
+
+	// printk("string being sent to Golioth is %s\n", sbuf);
+
+	err = golioth_lightdb_set(client,
+					  GOLIOTH_LIGHTDB_STREAM_PATH("sensor"),
+					  COAP_CONTENT_FORMAT_TEXT_PLAIN,
+					  sbuf, 
+					  strlen(sbuf));
+	if (err) {
+		LOG_WRN("Failed to send sensor: %d", err);
+		printk("Failed to send sensor: %d\n", err);	
+	}
+
+	LOG_DBG("LED1 off");
+
 	dk_set_led_off(DK_LED1);
-	//LOG_DBG("Done sending to Golioth LightDB Stream\n");
+
 }
 
-K_WORK_DEFINE(my_stream_work, my_stream_work_handler);
+K_WORK_DEFINE(my_sensorstream_work, my_sensorstream_work_handler);
 
 
 // This work function will take a sensor reading
@@ -112,11 +120,11 @@ K_WORK_DEFINE(my_stream_work, my_stream_work_handler);
 void my_sensor_work_handler(struct k_work *work)
 {
 
-	LOG_DBG("Taking sensor readings (placeholder)");
+	LOG_DBG("LED1 on, taking sensor readings");
 
 	dk_set_led_on(DK_LED1);
 
-	k_work_submit(&my_stream_work);
+	k_work_submit(&my_sensorstream_work);
 	
 
 }
@@ -130,7 +138,7 @@ void my_timer_handler(struct k_timer *dummy) {
 
 	snprintk(sbuf, sizeof(sbuf) - 1, "%d", counter);
 
-	LOG_DBG("Interval of %d seconds is up, updating state and taking a reading", sensor_interval);
+	LOG_INF("Interval of %d seconds is up, taking a reading", sensor_interval);
 	
 	err = golioth_lightdb_set(client,
 				  GOLIOTH_LIGHTDB_PATH("number_of_timed_updates"),
@@ -174,7 +182,7 @@ static void on_button_changed(uint32_t button_state, uint32_t has_changed)
 
 	if ((buttons & DK_BTN1_MSK) && button_state == 1) {
 		golioth_send_hello(client); 
-		LOG_DBG("Button %d pressed, taking a reading now!", has_changed);
+		LOG_DBG("Button %d pressed, taking a reading", has_changed);
 		k_work_submit(&my_sensor_work);
 	}
 
@@ -265,6 +273,13 @@ void main(void)
 
     if (imu_sensor == NULL) {
         printk("Could not get lis2dh12 device\n");
+        return;
+    }
+
+	mag_sensor = (void *)DEVICE_DT_GET_ANY(honeywell_sm351lt);
+
+    if (mag_sensor == NULL) {
+        printk("Could not get sm351lt device\n");
         return;
     }
 
