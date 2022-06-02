@@ -95,7 +95,7 @@ void my_sensorstream_work_handler(struct k_work *work)
 	// printk("string being sent to Golioth is %s\n", sbuf);
 
 	err = golioth_lightdb_set(client,
-					  GOLIOTH_LIGHTDB_STREAM_PATH("sensor"),
+					  GOLIOTH_LIGHTDB_STREAM_PATH("redSensor"),
 					  COAP_CONTENT_FORMAT_TEXT_PLAIN,
 					  sbuf, 
 					  strlen(sbuf));
@@ -104,9 +104,10 @@ void my_sensorstream_work_handler(struct k_work *work)
 		printk("Failed to send sensor: %d\n", err);	
 	}
 
-	LOG_DBG("LED1 off");
+	LOG_DBG("LED off");
+	dk_set_led_on(DK_LED1);
+	dk_set_led_on(DK_LED2);
 
-	dk_set_led_off(DK_LED1);
 
 }
 
@@ -120,9 +121,9 @@ K_WORK_DEFINE(my_sensorstream_work, my_sensorstream_work_handler);
 void my_sensor_work_handler(struct k_work *work)
 {
 
-	LOG_DBG("LED1 on, taking sensor readings");
+	LOG_DBG("LED on, taking sensor readings");
 
-	dk_set_led_on(DK_LED1);
+	dk_set_led_off(DK_LED2);	// Inverted logic
 
 	k_work_submit(&my_sensorstream_work);
 	
@@ -162,7 +163,7 @@ static void on_ot_connect(struct k_work *item)
 {
 	ARG_UNUSED(item);
 
-	dk_set_led_on(OT_CONNECTION_LED);
+	// dk_set_led_off(OT_CONNECTION_LED);		// Turn LED off when connected
 
 	client->on_message = golioth_on_message;
 	golioth_system_client_start();
@@ -172,7 +173,7 @@ static void on_ot_disconnect(struct k_work *item)
 {
 	ARG_UNUSED(item);
 
-	dk_set_led_off(OT_CONNECTION_LED);
+	// dk_set_led_on(OT_CONNECTION_LED);		// Turn LED on when NOT connected
 }
 
 
@@ -289,6 +290,8 @@ void main(void)
 	openthread_set_state_changed_cb(on_thread_state_changed);
 	openthread_start(openthread_get_default_context());
 
+	dk_set_led_off(DK_LED1);
+	dk_set_led_off(DK_LED2);
 
     k_timer_start(&my_timer, K_SECONDS(sensor_interval), K_SECONDS(sensor_interval));
 
