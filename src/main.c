@@ -120,6 +120,19 @@ void my_sensor_work_handler(struct k_work *work)
 
 K_WORK_DEFINE(my_sensor_work, my_sensor_work_handler);
 
+static int counter_set_handler(struct golioth_req_rsp *rsp)
+{
+	if (rsp->err) {
+		LOG_WRN("Failed to set counter: %d", rsp->err);
+		return rsp->err;
+	}
+
+	LOG_DBG("Counter successfully set");
+
+	return 0;
+}
+
+
 void my_timer_handler(struct k_timer *dummy) {
 
 	char sbuf[sizeof("4294967295")];
@@ -129,14 +142,15 @@ void my_timer_handler(struct k_timer *dummy) {
 
 	LOG_INF("Interval of %d seconds is up, taking a reading", sensor_interval);
 	
-	// err = golioth_lightdb_set(client, "number_of_timed_updates",
-	// 			  GOLIOTH_CONTENT_FORMAT_APP_JSON,
-	// 			  sbuf, strlen(sbuf));
+	err = golioth_lightdb_set_cb(client, "counter",
+				     GOLIOTH_CONTENT_FORMAT_APP_JSON,
+				     sbuf, strlen(sbuf),
+				     counter_set_handler, NULL);
+	if (err) {
+		LOG_WRN("Failed to set counter: %d", err);
+		return;
+	}
 
-	// if (err) {
-	// 	LOG_WRN("Failed to update counter: %d", err);
-	// }
-	
 	counter++;
 
 
