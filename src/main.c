@@ -19,7 +19,7 @@
 LOG_MODULE_REGISTER(red_demo_main, LOG_LEVEL_DBG);
 
 #define CONSOLE_LABEL DT_LABEL(DT_CHOSEN(zephyr_console))
-#define OT_CONNECTION_LED DK_LED2
+#define OT_CONNECTION_LED DK_LED1
 
 int sensor_interval = 60;
 int counter = 0;
@@ -193,9 +193,7 @@ static void on_ot_connect(struct k_work *item)
 {
 	ARG_UNUSED(item);
 
-	dk_set_led_off(DK_LED2);
-
-	// dk_set_led_off(OT_CONNECTION_LED);		// Turn LED off when connected
+	dk_set_led_off(OT_CONNECTION_LED);		// Turn LED off when connected
 
 	// client->on_message = golioth_on_message;
 	
@@ -205,7 +203,7 @@ static void on_ot_disconnect(struct k_work *item)
 {
 	ARG_UNUSED(item);
 
-	// dk_set_led_on(OT_CONNECTION_LED);		// Turn LED on when NOT connected
+	dk_set_led_on(OT_CONNECTION_LED);		// Turn LED on when NOT connected
 }
 
 
@@ -316,9 +314,8 @@ void main(void)
         return;
     }
 
-	//Turn on LED 1 and 2 while connecting
-	dk_set_led_on(DK_LED1);
-	dk_set_led_on(DK_LED2);
+	//Turn on LED 1 while connecting
+	dk_set_led_on(OT_CONNECTION_LED);
 
 	k_work_init(&on_connect_work, on_ot_connect);
 	k_work_init(&on_disconnect_work, on_ot_disconnect);
@@ -331,7 +328,7 @@ void main(void)
 
 	k_sem_take(&connected, K_FOREVER);
 
-	dk_set_led_off(DK_LED1);
+	dk_set_led_off(DK_LED2);
 
     k_timer_start(&my_timer, K_SECONDS(sensor_interval), K_SECONDS(sensor_interval));
 
