@@ -1,7 +1,7 @@
 #include <dk_buttons_and_leds.h>
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 
-#include <drivers/uart.h>
+#include <zephyr/drivers/uart.h>
 #include <usb/usb_device.h>
 
 #include <net/golioth/system_client.h>
@@ -9,14 +9,14 @@
 #include <net/openthread.h>
 #include <openthread/thread.h>
 
-#include <drivers/sensor.h>
+#include <zephyr/drivers/sensor.h>
 #include <device.h>
 
 #include <init.h>
 
 
 
-LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(red_demo_main, LOG_LEVEL_DBG);
 
 #define CONSOLE_LABEL DT_LABEL(DT_CHOSEN(zephyr_console))
 #define OT_CONNECTION_LED DK_LED2
@@ -33,19 +33,39 @@ static struct k_work on_disconnect_work;
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
-static void golioth_on_message(struct golioth_client *client,
-			       struct coap_packet *rx)
+static K_SEM_DEFINE(connected, 0, 1);
+
+// static void golioth_on_message(struct golioth_client *client,
+// 			       struct coap_packet *rx)
+// {
+// 	uint16_t payload_len;
+// 	const uint8_t *payload;
+// 	uint8_t type;
+
+// 	type = coap_header_get_type(rx);
+// 	payload = coap_packet_get_payload(rx, &payload_len);
+
+// 	if (!IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH) && payload) {
+// 		LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
+// 	}
+// }
+
+static int sensor_push_handler(struct golioth_req_rsp *rsp)
 {
-	uint16_t payload_len;
-	const uint8_t *payload;
-	uint8_t type;
-
-	type = coap_header_get_type(rx);
-	payload = coap_packet_get_payload(rx, &payload_len);
-
-	if (!IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH) && payload) {
-		LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
+	if (rsp->err) {
+		LOG_WRN("Failed to push sensor: %d", rsp->err);
+		return rsp->err;
 	}
+	
+	LOG_DBG("LED off");
+
+	// dk_set_led_on(DK_LED1);
+	// dk_set_led_on(DK_LED2);
+	dk_set_led_off(DK_LED2);
+
+	LOG_DBG("Sensor successfully pushed");
+
+	return 0;
 }
 
 // This work function will submit a LightDB Stream output
@@ -94,20 +114,17 @@ void my_sensorstream_work_handler(struct k_work *work)
 
 	// printk("string being sent to Golioth is %s\n", sbuf);
 
-	err = golioth_lightdb_set(client,
-					  GOLIOTH_LIGHTDB_STREAM_PATH("redSensor"),
-					  COAP_CONTENT_FORMAT_TEXT_PLAIN,
-					  sbuf, 
-					  strlen(sbuf));
+
+	// Async send data to the cloud, get confirmation and call the push handler
+
+	err = golioth_stream_push_cb(client, "redSensor",
+				     GOLIOTH_CONTENT_FORMAT_APP_JSON,
+				     sbuf, strlen(sbuf),
+				     sensor_push_handler, NULL);
 	if (err) {
 		LOG_WRN("Failed to send sensor: %d", err);
 		printk("Failed to send sensor: %d\n", err);	
 	}
-
-	LOG_DBG("LED off");
-	dk_set_led_on(DK_LED1);
-	dk_set_led_on(DK_LED2);
-
 
 }
 
@@ -123,7 +140,7 @@ void my_sensor_work_handler(struct k_work *work)
 
 	LOG_DBG("LED on, taking sensor readings");
 
-	dk_set_led_off(DK_LED2);	// Inverted logic
+	dk_set_led_on(DK_LED2);
 
 	k_work_submit(&my_sensorstream_work);
 	
@@ -141,13 +158,13 @@ void my_timer_handler(struct k_timer *dummy) {
 
 	LOG_INF("Interval of %d seconds is up, taking a reading", sensor_interval);
 	
-	err = golioth_lightdb_set(client,
-				  GOLIOTH_LIGHTDB_PATH("number_of_timed_updates"),
-				  COAP_CONTENT_FORMAT_TEXT_PLAIN,
-				  sbuf, strlen(sbuf));
-	if (err) {
-		LOG_WRN("Failed to update counter: %d", err);
-	}
+	// err = golioth_lightdb_set(client, "number_of_timed_updates",
+	// 			  GOLIOTH_CONTENT_FORMAT_APP_JSON,
+	// 			  sbuf, strlen(sbuf));
+
+	// if (err) {
+	// 	LOG_WRN("Failed to update counter: %d", err);
+	// }
 	
 	counter++;
 
@@ -159,14 +176,29 @@ void my_timer_handler(struct k_timer *dummy) {
 K_TIMER_DEFINE(my_timer, my_timer_handler, NULL);
 
 
+static void golioth_on_connect(struct golioth_client *client)
+{
+	k_sem_give(&connected);
+
+	LOG_INF("Connected to Golioth!");
+
+	// int err = golioth_settings_register_callback(client, on_setting);
+
+	// if (err) {
+	// 	LOG_ERR("Failed to register settings callback: %d", err);
+	// }
+}
+
 static void on_ot_connect(struct k_work *item)
 {
 	ARG_UNUSED(item);
 
+	dk_set_led_off(DK_LED2);
+
 	// dk_set_led_off(OT_CONNECTION_LED);		// Turn LED off when connected
 
-	client->on_message = golioth_on_message;
-	golioth_system_client_start();
+	// client->on_message = golioth_on_message;
+	
 }
 
 static void on_ot_disconnect(struct k_work *item)
@@ -284,14 +316,22 @@ void main(void)
         return;
     }
 
+	//Turn on LED 1 and 2 while connecting
+	dk_set_led_on(DK_LED1);
+	dk_set_led_on(DK_LED2);
+
 	k_work_init(&on_connect_work, on_ot_connect);
 	k_work_init(&on_disconnect_work, on_ot_disconnect);
 
 	openthread_set_state_changed_cb(on_thread_state_changed);
 	openthread_start(openthread_get_default_context());
 
+	client->on_connect = golioth_on_connect;
+	golioth_system_client_start();
+
+	k_sem_take(&connected, K_FOREVER);
+
 	dk_set_led_off(DK_LED1);
-	dk_set_led_off(DK_LED2);
 
     k_timer_start(&my_timer, K_SECONDS(sensor_interval), K_SECONDS(sensor_interval));
 
