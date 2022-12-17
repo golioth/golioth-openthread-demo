@@ -35,20 +35,6 @@ static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
 static K_SEM_DEFINE(connected, 0, 1);
 
-// static void golioth_on_message(struct golioth_client *client,
-// 			       struct coap_packet *rx)
-// {
-// 	uint16_t payload_len;
-// 	const uint8_t *payload;
-// 	uint8_t type;
-
-// 	type = coap_header_get_type(rx);
-// 	payload = coap_packet_get_payload(rx, &payload_len);
-
-// 	if (!IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH) && payload) {
-// 		LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
-// 	}
-// }
 
 static int sensor_push_handler(struct golioth_req_rsp *rsp)
 {
@@ -56,15 +42,8 @@ static int sensor_push_handler(struct golioth_req_rsp *rsp)
 		LOG_WRN("Failed to push sensor: %d", rsp->err);
 		return rsp->err;
 	}
-	
-	LOG_DBG("LED off");
-
-	// dk_set_led_on(DK_LED1);
-	// dk_set_led_on(DK_LED2);
 	dk_set_led_off(DK_LED2);
-
 	LOG_DBG("Sensor successfully pushed");
-
 	return 0;
 }
 
@@ -111,12 +90,7 @@ void my_sensorstream_work_handler(struct k_work *work)
 			sensor_value_to_double(&temp)
 			);
 
-
-	// printk("string being sent to Golioth is %s\n", sbuf);
-
-
 	// Async send data to the cloud, get confirmation and call the push handler
-
 	err = golioth_stream_push_cb(client, "redSensor",
 				     GOLIOTH_CONTENT_FORMAT_APP_JSON,
 				     sbuf, strlen(sbuf),
@@ -131,7 +105,7 @@ void my_sensorstream_work_handler(struct k_work *work)
 K_WORK_DEFINE(my_sensorstream_work, my_sensorstream_work_handler);
 
 
-// This work function will take a sensor reading
+// This work function initiates a sensor reading
 // And kick off a LightDB stream event
 // It should be called every time the timer fires
 
@@ -139,12 +113,9 @@ void my_sensor_work_handler(struct k_work *work)
 {
 
 	LOG_DBG("LED on, taking sensor readings");
-
 	dk_set_led_on(DK_LED2);
-
 	k_work_submit(&my_sensorstream_work);
 	
-
 }
 
 K_WORK_DEFINE(my_sensor_work, my_sensor_work_handler);
@@ -181,12 +152,6 @@ static void golioth_on_connect(struct golioth_client *client)
 	k_sem_give(&connected);
 
 	LOG_INF("Connected to Golioth!");
-
-	// int err = golioth_settings_register_callback(client, on_setting);
-
-	// if (err) {
-	// 	LOG_ERR("Failed to register settings callback: %d", err);
-	// }
 }
 
 static void on_ot_connect(struct k_work *item)
@@ -194,8 +159,6 @@ static void on_ot_connect(struct k_work *item)
 	ARG_UNUSED(item);
 
 	dk_set_led_off(OT_CONNECTION_LED);		// Turn LED off when connected
-
-	// client->on_message = golioth_on_message;
 	
 }
 
