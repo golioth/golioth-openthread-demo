@@ -1,49 +1,49 @@
-manifest:
-  version: 0.7
- 
-  defaults:
-    remote: nrfconnect
+# Copyright (c) 2022-2023 Golioth, Inc.
+# SPDX-License-Identifier: Apache-2.0
 
-  remotes:
-    - name: nrfconnect
-      url-base: https://github.com/nrfconnect
+manifest:
+  version: 0.8
+
   projects:
-    - name: nrf
-      repo-path: sdk-nrf
-      remote: nrfconnect
-      revision: v2.1.0
+    - name: golioth
+      path: modules/lib/golioth
+      revision: v0.8.0
+      url: https://github.com/golioth/golioth-zephyr-sdk
+      west-commands: scripts/west-commands.yml
       import:
+        file: west-ncs.yml
         path-prefix: deps
         name-allowlist:
+          - nrf
           - zephyr
           - cmsis
           - hal_nordic
           - mbedtls
-          - net-tools
-          - nrf_hw_models
-          - segger
-          - tinycrypt
-          - tf-m-tests
-          - nrfxlib
-          - mcuboot
-          - mcumgr
-          - tinycbor
           - mbedtls-nrf
-          - memfault-firmware-sdk
-          - openthread
+          - mcuboot
+          - net-tools
+          - nrfxlib
+          - qcbor
+          - segger
+          - tfm-mcuboot
+          - tinycrypt
+          - trusted-firmware-m
+          - zcbor
 
-    # Golioth repository.
-    - name: golioth
-      path: deps/modules/lib/golioth
-      revision: v0.5.0
-      url: https://github.com/golioth/zephyr-sdk.git
+    - name: golioth-zephyr-boards
+      path: deps/modules/lib/golioth-boards
+      revision: v1.0.1
+      url: https://github.com/golioth/golioth-zephyr-boards
 
-    # QCBOR
-    - name: qcbor
-      path: deps/modules/lib/qcbor
-      revision: 17b5607b8c49b835d22dec3effa97b25c89267b3
-      url: https://github.com/golioth/QCBOR.git
+    - name: libostentus
+      path: deps/modules/lib/libostentus
+      revision: v1.0.0
+      url: https://github.com/golioth/libostentus
+
+    - name: zephyr-network-info
+      path: deps/modules/lib/network-info
+      revision: v1.0.1
+      url: https://github.com/golioth/zephyr-network-info
 
   self:
     path: app
-    west-commands: scripts/west-commands.yml
