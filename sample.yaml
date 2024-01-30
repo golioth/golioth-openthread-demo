@@ -1,11 +1,16 @@
-# Copyright (c) 2022-2023 Golioth, Inc.
+# Copyright (c) 2022-2024 Golioth, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 sample:
-  description: Golioth Reference Design Template
-  name: rd_template
+  description: Golioth Thread sample with OpenThread and IPv6
+  name: openthread
+
 common:
-  harness: net
-  platform_allow: >
-    nrf9160dk_nrf9160_ns
-  tags: golioth
+  platform_allow: nrf52840dk_nrf52840 adafruit_feather_nrf52840
+  tags: golioth net socket thread
+  integration_platforms:
+    - nrf52840dk_nrf52840
+    - adafruit_feather_nrf52840
+
+tests:
+  sample.golioth.openthread
