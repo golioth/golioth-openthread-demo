@@ -1,49 +1,35 @@
-manifest:
-  version: 0.7
- 
-  defaults:
-    remote: nrfconnect
+# Copyright (c) 2022-2024 Golioth, Inc.
+# SPDX-License-Identifier: Apache-2.0
 
-  remotes:
-    - name: nrfconnect
-      url-base: https://github.com/nrfconnect
+manifest:
+  version: 0.8
+
   projects:
-    - name: nrf
-      repo-path: sdk-nrf
-      remote: nrfconnect
-      revision: v2.1.0
+    - name: golioth
+      path: modules/lib/golioth
+      revision: 42408c7679494ce1e1fe8513748eb2b728cbfd89
+      url: https://github.com/golioth/golioth-zephyr-sdk
+      west-commands: scripts/west-commands.yml
       import:
+        file: west-ncs.yml
         path-prefix: deps
         name-allowlist:
+          - nrf
           - zephyr
           - cmsis
           - hal_nordic
           - mbedtls
-          - net-tools
-          - nrf_hw_models
-          - segger
-          - tinycrypt
-          - tf-m-tests
-          - nrfxlib
-          - mcuboot
-          - mcumgr
-          - tinycbor
           - mbedtls-nrf
-          - memfault-firmware-sdk
+          - mcuboot
+          - net-tools
+          - nrfxlib
+          - qcbor
+          - segger
+          - tfm-mcuboot
+          - tinycrypt
+          - trusted-firmware-m
           - openthread
-
-    # Golioth repository.
-    - name: golioth
-      path: deps/modules/lib/golioth
-      revision: v0.5.0
-      url: https://github.com/golioth/zephyr-sdk.git
-
-    # QCBOR
-    - name: qcbor
-      path: deps/modules/lib/qcbor
-      revision: 17b5607b8c49b835d22dec3effa97b25c89267b3
-      url: https://github.com/golioth/QCBOR.git
+          - zcbor
 
   self:
     path: app
-    west-commands: scripts/west-commands.yml

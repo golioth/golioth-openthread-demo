@@ -1,13 +1,16 @@
-#
-# Copyright (c) 2020 Nordic Semiconductor ASA
-#
-# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
-#
+# Copyright (c) 2022-2023 Golioth, Inc.
+# SPDX-License-Identifier: Apache-2.0
 
-menu "Zephyr Kernel"
+mainmenu "Golioth application options"
+
+if DNS_RESOLVER
+
+config DNS_SERVER_IP_ADDRESSES
+	default y
+
+config DNS_SERVER1
+	default "1.1.1.1"
+
+endif # DNS_RESOLVER
+
 source "Kconfig.zephyr"
-endmenu
-
-module = GOLIOTH_THREAD
-module-str = Golioth Thread
-source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
