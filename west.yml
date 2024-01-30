@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2023 Golioth, Inc.
+# Copyright (c) 2022-2024 Golioth, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 manifest:
@@ -7,7 +7,7 @@ manifest:
   projects:
     - name: golioth
       path: modules/lib/golioth
-      revision: v0.8.0
+      revision: 42408c7679494ce1e1fe8513748eb2b728cbfd89
       url: https://github.com/golioth/golioth-zephyr-sdk
       west-commands: scripts/west-commands.yml
       import:
@@ -28,22 +28,8 @@ manifest:
           - tfm-mcuboot
           - tinycrypt
           - trusted-firmware-m
+          - openthread
           - zcbor
-
-    - name: golioth-zephyr-boards
-      path: deps/modules/lib/golioth-boards
-      revision: v1.0.1
-      url: https://github.com/golioth/golioth-zephyr-boards
-
-    - name: libostentus
-      path: deps/modules/lib/libostentus
-      revision: v1.0.0
-      url: https://github.com/golioth/libostentus
-
-    - name: zephyr-network-info
-      path: deps/modules/lib/network-info
-      revision: v1.0.1
-      url: https://github.com/golioth/zephyr-network-info
 
   self:
     path: app
