@@ -44,15 +44,26 @@ This firmware can be built for a variety of supported hardware platforms.
           :width: 240
      - ``nrf52840dk_nrf52840``
 
+<<<<<<< HEAD
 .. list-table:: **Adafruit Hardware**
    :header-rows: 1
+=======
+Prior to building, update ``CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION`` in the ``prj.conf`` file to
+reflect the firmware version number you want to assign to this build. Then run the following
+commands to build and program the firmware onto the device.
+>>>>>>> upstream/main
 
    * - Development Board
      - Zephyr Board
 
+<<<<<<< HEAD
    * - .. image:: images/Adafurit_nRF52840_Feather.png
           :width: 240
      - ``adafruit_feather_nrf52840``
+=======
+   $ (.venv) west build -p -b aludel_mini_v1_sparkfun9160_ns app
+   $ (.venv) west flash
+>>>>>>> upstream/main
 
 
 Firmware Overview
@@ -182,6 +193,7 @@ Install ``west`` meta-tool
 
 .. code-block:: shell
 
+<<<<<<< HEAD
    pip install wheel west
 
 Use ``west`` to initialize the workspace and install dependencies
@@ -232,6 +244,15 @@ Flash the firmware
 
 .. code-block:: text
 
+=======
+Prior to building, update ``CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION`` in the ``prj.conf`` file to
+reflect the firmware version number you want to assign to this build. Then run the following
+commands to build and program the firmware onto the device.
+
+.. code-block:: text
+
+   $ (.venv) west build -p -b nrf9160dk_nrf9160_ns app
+>>>>>>> upstream/main
    $ (.venv) west flash
 
 Provision the device
