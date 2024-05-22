@@ -44,32 +44,20 @@ This firmware can be built for a variety of supported hardware platforms.
           :width: 240
      - ``nrf52840dk_nrf52840``
 
-<<<<<<< HEAD
 .. list-table:: **Adafruit Hardware**
    :header-rows: 1
-=======
-Prior to building, update ``CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION`` in the ``prj.conf`` file to
-reflect the firmware version number you want to assign to this build. Then run the following
-commands to build and program the firmware onto the device.
->>>>>>> upstream/main
 
    * - Development Board
      - Zephyr Board
 
-<<<<<<< HEAD
    * - .. image:: images/Adafurit_nRF52840_Feather.png
           :width: 240
      - ``adafruit_feather_nrf52840``
-=======
-   $ (.venv) west build -p -b aludel_mini_v1_sparkfun9160_ns app
-   $ (.venv) west flash
->>>>>>> upstream/main
-
 
 Firmware Overview
 *****************
 This is a Reference Design for a Thread Protocol enabled device using Zephyr
-and connecting to Golioth over IPv6. 
+and connecting to Golioth over IPv6.
 
 Configure ``prj.conf``
 ======================
@@ -118,7 +106,7 @@ LightDB Stream Service
 ----------------------
 
 An up-counting timer is periodically sent to the ``sensor/counter`` endpoint of the
-LightDB Stream service to simulate sensor data. 
+LightDB Stream service to simulate sensor data.
 
 LightDB State Service
 ---------------------

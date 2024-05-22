@@ -39,7 +39,6 @@ static const struct gpio_dt_spec golioth_led = GPIO_DT_SPEC_GET(DT_ALIAS(golioth
 static const struct gpio_dt_spec user_btn = GPIO_DT_SPEC_GET(DT_ALIAS(user_btn), gpios);
 #endif /* DT_NODE_EXISTS(DT_ALIAS(golioth_led)) */
 
-static const struct gpio_dt_spec user_btn = GPIO_DT_SPEC_GET(DT_ALIAS(user_btn), gpios);
 static struct gpio_callback button_cb_data;
 
 static struct k_work on_connect_work;
@@ -107,6 +106,7 @@ static void start_golioth_client(void)
 	/* Register RPC service */
 	app_rpc_register(client);
 }
+
 static void on_thread_state_changed(otChangedFlags flags, struct openthread_context *ot_context,
 				    void *user_data)
 {
@@ -129,7 +129,6 @@ static void on_thread_state_changed(otChangedFlags flags, struct openthread_cont
 
 	if (flags == OT_CHANGED_IP6_ADDRESS_ADDED) {
 		start_golioth_client();
-
 	}
 }
 
@@ -185,13 +184,6 @@ int main(void)
 		LOG_ERR("Unable to configure LED for Golioth Logo");
 	}
 #endif /* #if DT_NODE_EXISTS(DT_ALIAS(golioth_led)) */
-
-	/* If nRF9160 is not used, start the Golioth Client and block until connected */
-
-	/* Run WiFi/DHCP if necessary */
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_COMMON)) {
-		net_connect();
-	}
 
 	/* Set up user button */
 	err = gpio_pin_configure_dt(&user_btn, GPIO_INPUT);

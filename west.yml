@@ -7,7 +7,7 @@ manifest:
   projects:
     - name: golioth
       path: modules/lib/golioth-firmware-sdk
-      revision: v0.12.2
+      revision: e4a30b70d64d311c50e3e0a82d4f83d3921e5d2d
       url: https://github.com/golioth/golioth-firmware-sdk.git
       west-commands: scripts/west-commands.yml
       submodules: true
