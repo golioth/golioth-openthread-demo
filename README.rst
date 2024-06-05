@@ -15,9 +15,9 @@ Requirements
 ************
 
 - Golioth device PSK credentials
-- A running Thread Border Router with NAT64 (we will be using the commercially
-  available off-the-shelf `GL-S200 Thread Border Router`_)
-- Thread network name and network key
+- A running Thread Border Router with NAT64 translation (we will be using the
+  commercially available off-the-shelf `GL-S200 Thread Border Router`_)
+- Thread Network Name and Network Key
 
 Supported Hardware
 ******************
@@ -72,12 +72,15 @@ by changing these lines in the ``prj.conf`` configuration file, e.g.:
 .. code-block:: cfg
 
    CONFIG_OPENTHREAD_NETWORKKEY="00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff"
-   CONFIG_OPENTHREAD_NETWORK_NAME="OpenThreadDemo"
+   CONFIG_OPENTHREAD_NETWORK_NAME="golioth-thread"
 
-``CONFIG_OPENTHREAD_CHANNEL`` by default is set to ``11``.
+``CONFIG_OPENTHREAD_CHANNEL`` is set to ``26``.
 
-Make sure the Thread network name, Thread network key and channel match your
-Border Router configuration.
+.. pull-quote::
+   [!IMPORTANT]
+
+   Make sure the Thread Network Name, Thread Network Key and Thread Channel
+   match your Border Router configuration.
 
 Supported Golioth Zephyr SDK Features
 =====================================
@@ -145,29 +148,14 @@ The following RPCs can be initiated in the Remote Procedure Call menu of the
    * ``3``: ``LOG_LEVEL_INF``
    * ``4``: ``LOG_LEVEL_DBG``
 
-Building the firmware
-*********************
+Local set up
+************
 
-The firmware build instructions below assume you have already set up a Zephyr
-development environment and have some basic familiarity with building firmware
-using the Zephyr Real Time Operating System (RTOS).
+Do not clone this repo using git. Zephyr's ``west`` meta tool should be used to
+set up your local workspace.
 
-If you're brand new to building firmware with Zephyr, you will need to follow
-the `Zephyr Getting Started Guide`_ to install the Zephyr SDK and related
-dependencies.
-
-We also provide free online `Developer Training`_ for Zephyr at:
-
-https://training.golioth.io/docs/zephyr-training
-
-.. pull-quote::
-   [!IMPORTANT]
-
-   Do not clone this repo using git. Zephyr's ``west`` meta-tool should be used
-   to set up your local workspace.
-
-Create a Python virtual environment (recommended)
-=================================================
+Install the Python virtual environment (recommended)
+====================================================
 
 .. code-block:: shell
 
@@ -175,13 +163,6 @@ Create a Python virtual environment (recommended)
    mkdir golioth-openthread-demo
    python -m venv golioth-openthread-demo/.venv
    source golioth-openthread-demo/.venv/bin/activate
-
-Install ``west`` meta-tool
-==========================
-
-.. code-block:: shell
-
-<<<<<<< HEAD
    pip install wheel west
 
 Use ``west`` to initialize the workspace and install dependencies
@@ -195,16 +176,20 @@ Use ``west`` to initialize the workspace and install dependencies
    west zephyr-export
    pip install -r deps/zephyr/scripts/requirements.txt
 
-Build the firmware
-==================
+Building the application
+************************
 
-Build the Zephyr firmware from the top-level workspace of your project. After a
-successful build you will see a new ``build/`` directory.
+Build the Zephyr sample application from the top-level workspace of your project.
+After a successful build you will see a new ``build/`` directory.
 
 Note that this git repository was cloned into the ``app`` folder, so any changes
 you make to the application itself should be committed inside this repository.
 The ``build`` and ``deps`` directories in the root of the workspace are managed
 outside of this git repository by the ``west`` meta-tool.
+
+Prior to building, update ``CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION`` in the ``prj.conf`` file to
+reflect the firmware version number you want to assign to this build. Then run the following
+commands to build and program the firmware onto the device.
 
 .. pull-quote::
    [!IMPORTANT]
@@ -219,28 +204,19 @@ outside of this git repository by the ``west`` meta-tool.
 
 .. code-block:: text
 
-   $ (.venv) west build -p -b <your_zephyr_board_id> app -- -DCONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=\"<your.semantic.version>\"
+   $ (.venv) west build -p -b <your_zephyr_board_id> app --
 
-For example, to build firmware version ``1.2.3`` for the `Nordic nRF52840 DK`_-based follow-along hardware:
+For example, to build firmware for the `Nordic nRF52840 DK`_-based follow-along hardware:
 
 .. code-block:: text
 
-   $ (.venv) west build -p -b nrf52840dk_nrf52840 app -- -DCONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=\"1.2.3\"
+   $ (.venv) west build -p -b nrf52840dk_nrf52840 app --
 
 Flash the firmware
 ==================
 
 .. code-block:: text
 
-=======
-Prior to building, update ``CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION`` in the ``prj.conf`` file to
-reflect the firmware version number you want to assign to this build. Then run the following
-commands to build and program the firmware onto the device.
-
-.. code-block:: text
-
-   $ (.venv) west build -p -b nrf9160dk_nrf9160_ns app
->>>>>>> upstream/main
    $ (.venv) west flash
 
 Provision the device
