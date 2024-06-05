@@ -61,7 +61,10 @@ static void on_client_event(struct golioth_client *client,
 	if (is_connected) {
 		k_sem_give(&connected);
 		golioth_connection_led_set(1);
+	} else {
+		golioth_connection_led_set(0);
 	}
+
 	LOG_INF("Golioth client %s", is_connected ? "connected" : "disconnected");
 }
 
