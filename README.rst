@@ -8,7 +8,7 @@ Golioth OpenThread Demo
 This repository contains the firmware source code and `pre-built release
 firmware images <releases_>`_ for the Golioth OpenThread Demo.
 
-[To be updated] The full project details are available on the `Golioth Thread Demo Project Page`_.
+The full project details are available on the `Golioth Thread Demo Project Page`_.
 
 
 Requirements
@@ -204,13 +204,13 @@ commands to build and program the firmware onto the device.
 
 .. code-block:: text
 
-   $ (.venv) west build -p -b <your_zephyr_board_id> app --
+   $ (.venv) west build -p -b <your_zephyr_board_id> app
 
 For example, to build firmware for the `Nordic nRF52840 DK`_-based follow-along hardware:
 
 .. code-block:: text
 
-   $ (.venv) west build -p -b nrf52840dk_nrf52840 app --
+   $ (.venv) west build -p -b nrf52840dk_nrf52840 app
 
 Flash the firmware
 ==================
@@ -272,7 +272,7 @@ recommend the following workflow to pull in future changes:
 .. _Golioth Console: https://console.golioth.io
 .. _GL-S200 Thread Border Router: https://www.gl-inet.com/products/gl-s200/
 .. _Nordic nRF52840 DK: https://www.nordicsemi.com/Products/Development-hardware/nRF52840-DK
-.. _Golioth Thread Demo Project Page: https://golioth.github.io/golioth-openthread-demo-docs
+.. _Golioth Thread Demo Project Page: https://projects.golioth.io/reference-designs/openthread-demo/
 .. _releases: https://github.com/golioth/
 .. _Zephyr Getting Started Guide: https://docs.zephyrproject.org/latest/develop/getting_started/
 .. _Developer Training: https://training.golioth.io
