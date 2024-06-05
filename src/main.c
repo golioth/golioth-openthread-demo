@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "zephyr/kernel.h"
-#include "zephyr/sys/util_macro.h"
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth_openthread_demo, LOG_LEVEL_DBG);
 
@@ -15,16 +13,15 @@ LOG_MODULE_REGISTER(golioth_openthread_demo, LOG_LEVEL_DBG);
 #include "app_sensors.h"
 #include <golioth/client.h>
 #include <golioth/fw_update.h>
+#include <openthread/thread.h>
 #include <samples/common/net_connect.h>
 #include <samples/common/sample_credentials.h>
-#include <zephyr/kernel.h>
-
 #include <zephyr/drivers/gpio.h>
-
-#include <zephyr/net/openthread.h>
-#include <openthread/thread.h>
+#include "zephyr/kernel.h"
 #include <zephyr/net/coap.h>
+#include <zephyr/net/openthread.h>
 #include <zephyr/net/socket.h>
+#include "zephyr/sys/util_macro.h"
 
 /* Current firmware version; update in prj.conf or via build argument */
 static const char *_current_version = CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION;
