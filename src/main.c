@@ -1,205 +1,115 @@
-#include <dk_buttons_and_leds.h>
+/*
+ * Copyright (c) 2022-2023 Golioth, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(golioth_openthread_demo, LOG_LEVEL_DBG);
 
-#include <zephyr/drivers/uart.h>
-#include <usb/usb_device.h>
-
-#include <net/golioth/system_client.h>
-
-#include <net/openthread.h>
+#include "app_rpc.h"
+#include "app_settings.h"
+#include "app_state.h"
+#include "app_sensors.h"
+#include <golioth/client.h>
+#include <golioth/fw_update.h>
 #include <openthread/thread.h>
+#include <samples/common/net_connect.h>
+#include <samples/common/sample_credentials.h>
+#include <zephyr/drivers/gpio.h>
+#include "zephyr/kernel.h"
+#include <zephyr/net/coap.h>
+#include <zephyr/net/openthread.h>
+#include <zephyr/net/socket.h>
+#include "zephyr/sys/util_macro.h"
 
-#include <zephyr/drivers/sensor.h>
-#include <device.h>
+/* Current firmware version; update in prj.conf or via build argument */
+static const char *_current_version = CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION;
 
-#include <init.h>
+static struct golioth_client *client;
+K_SEM_DEFINE(connected, 0, 1);
 
+static k_tid_t _system_thread = 0;
 
+#if DT_NODE_EXISTS(DT_ALIAS(golioth_led))
+static const struct gpio_dt_spec golioth_led = GPIO_DT_SPEC_GET(DT_ALIAS(golioth_led), gpios);
+static const struct gpio_dt_spec user_btn = GPIO_DT_SPEC_GET(DT_ALIAS(user_btn), gpios);
+#endif /* DT_NODE_EXISTS(DT_ALIAS(golioth_led)) */
 
-LOG_MODULE_REGISTER(red_demo_main, LOG_LEVEL_DBG);
-
-#define CONSOLE_LABEL DT_LABEL(DT_CHOSEN(zephyr_console))
-#define OT_CONNECTION_LED DK_LED1
-
-int sensor_interval = 60;
-int counter = 0;
-
-struct device *temp_sensor;
-struct device *imu_sensor;
-struct device *mag_sensor;
+static struct gpio_callback button_cb_data;
 
 static struct k_work on_connect_work;
 static struct k_work on_disconnect_work;
 
-static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
+/* forward declarations */
+void golioth_connection_led_set(uint8_t state);
 
-static K_SEM_DEFINE(connected, 0, 1);
-
-
-static int sensor_push_handler(struct golioth_req_rsp *rsp)
+void wake_system_thread(void)
 {
-	if (rsp->err) {
-		LOG_WRN("Failed to push sensor: %d", rsp->err);
-		return rsp->err;
-	}
-	dk_set_led_off(DK_LED2);
-	LOG_DBG("Sensor successfully pushed");
-	return 0;
+	k_wakeup(_system_thread);
 }
 
-// This work function will submit a LightDB Stream output
-// It should be called every time the sensor takes a reading
-
-void my_sensorstream_work_handler(struct k_work *work)
+static void on_client_event(struct golioth_client *client,
+			    enum golioth_client_event event,
+			    void *arg)
 {
-	int err;
-	struct sensor_value temp;
-	struct sensor_value accel_x;
-	struct sensor_value accel_y;
-	struct sensor_value accel_z;
-	struct sensor_value mag;
-	char sbuf[100];
-	
-	// kick off a temp sensor reading!
-	sensor_sample_fetch(temp_sensor);
-	sensor_channel_get(temp_sensor, SENSOR_CHAN_AMBIENT_TEMP, &temp);
-	LOG_DBG("Temp is %d.%06d", temp.val1, abs(temp.val2));
+	bool is_connected = (event == GOLIOTH_CLIENT_EVENT_CONNECTED);
 
-	// kick off an IMU sensor reading!
-	sensor_sample_fetch(imu_sensor);
-	sensor_channel_get(imu_sensor, SENSOR_CHAN_ACCEL_X, &accel_x);
-	LOG_DBG("Accel X is %d.%06d", accel_x.val1, abs(accel_x.val2));
-	sensor_channel_get(imu_sensor, SENSOR_CHAN_ACCEL_Y, &accel_y);
-	LOG_DBG("Accel Y is %d.%06d", accel_y.val1, abs(accel_y.val2));	
-	sensor_channel_get(imu_sensor, SENSOR_CHAN_ACCEL_Z, &accel_z);
-	LOG_DBG("Accel Z is %d.%06d", accel_z.val1, abs(accel_z.val2));
-
-
-	// kick off a mag sensor reading!
-	sensor_sample_fetch(mag_sensor);
-	sensor_channel_get(mag_sensor, SENSOR_CHAN_PROX, &mag);
-	LOG_DBG("Mag is %d.%06d", mag.val1, abs(mag.val2));
-
-
-	snprintk(sbuf, sizeof(sbuf) - 1,
-			"{\"accel_x\":%f,\"accel_y\":%f,\"accel_z\":%f,\"mag\":%f,\"temp\":%f}",
-			sensor_value_to_double(&accel_x),
-			sensor_value_to_double(&accel_y),
-			sensor_value_to_double(&accel_z),
-			sensor_value_to_double(&mag),
-			sensor_value_to_double(&temp)
-			);
-
-	// Async send data to the cloud, get confirmation and call the push handler
-	err = golioth_stream_push_cb(client, "redSensor",
-				     GOLIOTH_CONTENT_FORMAT_APP_JSON,
-				     sbuf, strlen(sbuf),
-				     sensor_push_handler, NULL);
-	if (err) {
-		LOG_WRN("Failed to send sensor: %d", err);
-		printk("Failed to send sensor: %d\n", err);	
+	if (is_connected) {
+		k_sem_give(&connected);
+		golioth_connection_led_set(1);
+	} else {
+		golioth_connection_led_set(0);
 	}
 
-}
-
-K_WORK_DEFINE(my_sensorstream_work, my_sensorstream_work_handler);
-
-
-// This work function initiates a sensor reading
-// And kick off a LightDB stream event
-// It should be called every time the timer fires
-
-void my_sensor_work_handler(struct k_work *work)
-{
-
-	LOG_DBG("LED on, taking sensor readings");
-	dk_set_led_on(DK_LED2);
-	k_work_submit(&my_sensorstream_work);
-	
-}
-
-K_WORK_DEFINE(my_sensor_work, my_sensor_work_handler);
-
-static int counter_set_handler(struct golioth_req_rsp *rsp)
-{
-	if (rsp->err) {
-		LOG_WRN("Failed to set counter: %d", rsp->err);
-		return rsp->err;
-	}
-
-	LOG_DBG("Counter successfully set");
-
-	return 0;
-}
-
-
-void my_timer_handler(struct k_timer *dummy) {
-
-	char sbuf[sizeof("4294967295")];
-	int err;
-
-	snprintk(sbuf, sizeof(sbuf) - 1, "%d", counter);
-
-	LOG_INF("Interval of %d seconds is up, taking a reading", sensor_interval);
-	
-	err = golioth_lightdb_set_cb(client, "counter",
-				     GOLIOTH_CONTENT_FORMAT_APP_JSON,
-				     sbuf, strlen(sbuf),
-				     counter_set_handler, NULL);
-	if (err) {
-		LOG_WRN("Failed to set counter: %d", err);
-		return;
-	}
-
-	counter++;
-
-
-	k_work_submit(&my_sensor_work);
-
-}
-
-K_TIMER_DEFINE(my_timer, my_timer_handler, NULL);
-
-
-static void golioth_on_connect(struct golioth_client *client)
-{
-	k_sem_give(&connected);
-
-	LOG_INF("Connected to Golioth!");
+	LOG_INF("Golioth client %s", is_connected ? "connected" : "disconnected");
 }
 
 static void on_ot_connect(struct k_work *item)
 {
 	ARG_UNUSED(item);
 
-	dk_set_led_off(OT_CONNECTION_LED);		// Turn LED off when connected
-	
+	LOG_INF("OpenThread on connect");
 }
 
 static void on_ot_disconnect(struct k_work *item)
 {
 	ARG_UNUSED(item);
 
-	dk_set_led_on(OT_CONNECTION_LED);		// Turn LED on when NOT connected
+	LOG_INF("OpenThread on disconnect");
 }
 
-
-static void on_button_changed(uint32_t button_state, uint32_t has_changed)
+static void start_golioth_client(void)
 {
-	uint32_t buttons = button_state & has_changed;
+	/* Get the client configuration from auto-loaded settings */
+	const struct golioth_client_config *client_config = golioth_sample_credentials_get();
 
-	if ((buttons & DK_BTN1_MSK) && button_state == 1) {
-		golioth_send_hello(client); 
-		LOG_DBG("Button %d pressed, taking a reading", has_changed);
-		k_work_submit(&my_sensor_work);
-	}
+	/* Create and start a Golioth Client */
+	client = golioth_client_create(client_config);
 
+	/* Register Golioth on_connect callback */
+	golioth_client_register_event_callback(client, on_client_event, NULL);
+
+	/* Initialize DFU components */
+	golioth_fw_update_init(client, _current_version);
+
+	/*** Call Golioth APIs for other services in dedicated app files ***/
+	/* Observe State service data */
+	app_state_observe(client);
+
+	/* Set Golioth Client for streaming sensor data */
+	app_sensors_set_client(client);
+
+	/* Register Settings service */
+	app_settings_register(client);
+
+	/* Register RPC service */
+	app_rpc_register(client);
 }
 
-static void on_thread_state_changed(uint32_t flags, void *context)
+static void on_thread_state_changed(otChangedFlags flags, struct openthread_context *ot_context,
+				    void *user_data)
 {
-	struct openthread_context *ot_context = context;
-
 	if (flags & OT_CHANGED_THREAD_ROLE) {
 		switch (otThreadGetDeviceRole(ot_context->instance)) {
 		case OT_DEVICE_ROLE_CHILD:
@@ -210,103 +120,92 @@ static void on_thread_state_changed(uint32_t flags, void *context)
 
 		case OT_DEVICE_ROLE_DISABLED:
 		case OT_DEVICE_ROLE_DETACHED:
+
 		default:
 			k_work_submit(&on_disconnect_work);
 			break;
 		}
 	}
+
+	if (flags == OT_CHANGED_IP6_ADDRESS_ADDED) {
+		start_golioth_client();
+	}
 }
 
-void main(void)
+static struct openthread_state_changed_cb ot_state_chaged_cb = {
+	.state_changed_cb = on_thread_state_changed
+};
+
+void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-	int ret;
+	LOG_DBG("Button pressed at %d", k_cycle_get_32());
+	/* This function is an Interrupt Service Routine. Do not call functions that
+	 * use other threads, or perform long-running operations here
+	 */
+	k_wakeup(_system_thread);
+}
 
-#if DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_shell_uart), zephyr_cdc_acm_uart)
-	const struct device *dev;
-	uint32_t dtr = 0U;
+/* Set (unset) LED indicators for active Golioth connection */
+void golioth_connection_led_set(uint8_t state)
+{
+	uint8_t pin_state = state ? 1 : 0;
+#if DT_NODE_EXISTS(DT_ALIAS(golioth_led))
+	/* Turn on Golioth logo LED once connected */
+	gpio_pin_set_dt(&golioth_led, pin_state);
+#endif /* #if DT_NODE_EXISTS(DT_ALIAS(golioth_led)) */
+	/* Change the state of the Golioth LED on Ostentus */
+	IF_ENABLED(CONFIG_LIB_OSTENTUS, (led_golioth_set(pin_state);));
+}
 
-	ret = usb_enable(NULL);
-	if (ret != 0) {
-		LOG_ERR("Failed to enable USB");
-		return;
+
+int main(void)
+{
+	int err = 0;
+
+	LOG_DBG("Start OpenThread demo");
+
+	IF_ENABLED(CONFIG_NET_L2_OPENTHREAD, (
+		k_work_init(&on_connect_work, on_ot_connect);
+		k_work_init(&on_disconnect_work, on_ot_disconnect);
+
+		openthread_state_changed_cb_register(openthread_get_default_context(), &ot_state_chaged_cb);
+		openthread_start(openthread_get_default_context());
+	));
+
+	LOG_INF("Firmware version: %s", CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION);
+
+	/* Get system thread id so loop delay change event can wake main */
+	_system_thread = k_current_get();
+
+#if DT_NODE_EXISTS(DT_ALIAS(golioth_led))
+	/* Initialize Golioth logo LED */
+	err = gpio_pin_configure_dt(&golioth_led, GPIO_OUTPUT_INACTIVE);
+	if (err) {
+		LOG_ERR("Unable to configure LED for Golioth Logo");
+	}
+#endif /* #if DT_NODE_EXISTS(DT_ALIAS(golioth_led)) */
+
+	/* Set up user button */
+	err = gpio_pin_configure_dt(&user_btn, GPIO_INPUT);
+	if (err) {
+		LOG_ERR("Error %d: failed to configure %s pin %d", err, user_btn.port->name,
+			user_btn.pin);
+		return err;
 	}
 
-	dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_shell_uart));
-	if (dev == NULL) {
-		LOG_ERR("Failed to find specific UART device");
-		return;
+	err = gpio_pin_interrupt_configure_dt(&user_btn, GPIO_INT_EDGE_TO_ACTIVE);
+	if (err) {
+		LOG_ERR("Error %d: failed to configure interrupt on %s pin %d", err,
+			user_btn.port->name, user_btn.pin);
+		return err;
 	}
 
-	LOG_INF("Waiting for host to be ready to communicate");
+	gpio_init_callback(&button_cb_data, button_pressed, BIT(user_btn.pin));
+	gpio_add_callback(user_btn.port, &button_cb_data);
 
-	/* Data Terminal Ready - check if host is ready to communicate */
-	while (!dtr) {
-		ret = uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
-		if (ret) {
-			LOG_ERR("Failed to get Data Terminal Ready line state: %d",
-				ret);
-			continue;
-		}
-		k_msleep(100);
+	while (true) {
+		app_sensors_read_and_stream();
+
+		k_sleep(K_SECONDS(get_loop_delay_s()));
 	}
-
-	/* Data Carrier Detect Modem - mark connection as established */
-	(void)uart_line_ctrl_set(dev, UART_LINE_CTRL_DCD, 1);
-	/* Data Set Ready - the NCP SoC is ready to communicate */
-	(void)uart_line_ctrl_set(dev, UART_LINE_CTRL_DSR, 1);
-#endif
-
-	LOG_INF("Start Golioth Thread sample");
-
-	ret = dk_buttons_init(on_button_changed);
-	if (ret) {
-		LOG_ERR("Cannot init buttons (error: %d)", ret);
-		return;
-	}
-
-	ret = dk_leds_init();
-	if (ret) {
-		LOG_ERR("Cannot init leds, (error: %d)", ret);
-		return;
-	}
-
-	temp_sensor = (void *)DEVICE_DT_GET_ANY(silabs_si7055);
-
-    if (temp_sensor == NULL) {
-        printk("Could not get si7055 device\n");
-        return;
-    }
-
-	imu_sensor = (void *)DEVICE_DT_GET_ANY(st_lis2dh12);
-
-    if (imu_sensor == NULL) {
-        printk("Could not get lis2dh12 device\n");
-        return;
-    }
-
-	mag_sensor = (void *)DEVICE_DT_GET_ANY(honeywell_sm351lt);
-
-    if (mag_sensor == NULL) {
-        printk("Could not get sm351lt device\n");
-        return;
-    }
-
-	//Turn on LED 1 while connecting
-	dk_set_led_on(OT_CONNECTION_LED);
-
-	k_work_init(&on_connect_work, on_ot_connect);
-	k_work_init(&on_disconnect_work, on_ot_disconnect);
-
-	openthread_set_state_changed_cb(on_thread_state_changed);
-	openthread_start(openthread_get_default_context());
-
-	client->on_connect = golioth_on_connect;
-	golioth_system_client_start();
-
-	k_sem_take(&connected, K_FOREVER);
-
-	dk_set_led_off(DK_LED2);
-
-    k_timer_start(&my_timer, K_SECONDS(sensor_interval), K_SECONDS(sensor_interval));
-
 }
