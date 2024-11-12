@@ -1,5 +1,5 @@
 ..
-   Copyright (c) 2022-2024 Golioth, Inc.
+   Copyright (c) 2024 Golioth, Inc.
    SPDX-License-Identifier: Apache-2.0
 
 Golioth OpenThread Demo
@@ -18,6 +18,11 @@ Requirements
 - A running Thread Border Router with NAT64 translation (we will be using the
   commercially available off-the-shelf `GL-S200 Thread Border Router`_)
 - Thread Network Name and Network Key
+.. pull-quote::
+   [!IMPORTANT]
+
+   Do not clone this repo using git. Zephyr's ``west`` meta tool should be used to
+   set up your local workspace.
 
 Supported Hardware
 ******************
@@ -81,6 +86,28 @@ by changing these lines in the ``prj.conf`` configuration file, e.g.:
 
    Make sure the Thread Network Name, Thread Network Key and Thread Channel
    match your Border Router configuration.
+
+Add Pipeline to Golioth
+***********************
+
+Golioth uses `Pipelines`_ to route stream data. This gives you flexibility to change your data
+routing without requiring updated device firmware.
+
+Whenever sending stream data, you must enable a pipeline in your Golioth project to configure how
+that data is handled. Add the contents of ``pipelines/cbor-to-lightdb.yml`` as a new pipeline as
+follows (note that this is the default pipeline for new projects and may already be present):
+
+   1. Navigate to your project on the Golioth web console.
+   2. Select ``Pipelines`` from the left sidebar and click the ``Create`` button.
+   3. Give your new pipeline a name and paste the pipeline configuration into the editor.
+   4. Click the toggle in the bottom right to enable the pipeline and then click ``Create``.
+
+All data streamed to Golioth in CBOR format will now be routed to LightDB Stream and may be viewed
+using the web console. You may change this behavior at any time without updating firmware simply by
+editing this pipeline entry.
+
+Golioth Features
+****************
 
 Supported Golioth Zephyr SDK Features
 =====================================
@@ -186,41 +213,27 @@ Note that this git repository was cloned into the ``app`` folder, so any changes
 you make to the application itself should be committed inside this repository.
 The ``build`` and ``deps`` directories in the root of the workspace are managed
 outside of this git repository by the ``west`` meta-tool.
-
-Prior to building, update ``CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION`` in the ``prj.conf`` file to
-reflect the firmware version number you want to assign to this build. Then run the following
-commands to build and program the firmware onto the device.
-
-.. pull-quote::
-   [!IMPORTANT]
-
-   When running the commands below, make sure to replace the placeholder
-   ``<your_zephyr_board_id>`` with the actual Zephyr board from the table above
-   that matches your hardware.
-
-   In addition, replace ``<your.semantic.version>`` with a `SemVer`_-compliant
-   version string (e.g. ``1.2.3``) that will be used by the DFU service when
-   checking for firmware updates.
-
 .. code-block:: text
-
-   $ (.venv) west build -p -b <your_zephyr_board_id> app
-
-For example, to build firmware for the `Nordic nRF52840 DK`_-based follow-along hardware:
-
-.. code-block:: text
-
-   $ (.venv) west build -p -b nrf52840dk_nrf52840 app
-
-Flash the firmware
-==================
 
 .. code-block:: text
 
    $ (.venv) west flash
 
-Provision the device
-====================
+OTA Firmware Update
+*******************
+
+This application includes the ability to perform Over-the-Air (OTA) firmware updates:
+
+1. Update the version number in the `VERSION` file and perform a pristine (important) build to
+   incorporate the version change.
+2. Upload the `build/app/zephyr/zephyr.signed.bin` file as an artifact for your Golioth project
+   using `main` as the package name.
+3. Create and roll out a release based on this artifact.
+
+Visit `the Golioth Docs OTA Firmware Upgrade page`_ for more info.
+
+External Libraries
+******************
 
 In order for the device to securely authenticate with the Golioth Cloud, we need
 to provision the device with a pre-shared key (PSK). This key will persist
