@@ -1,17 +1,12 @@
-/* Copyright (c) 2020 Nordic Semiconductor ASA
+/*
+ * Copyright (c) 2024 Golioth, Inc.
  *
- * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 / {
 	chosen {
+		nordic,code-partition = &boot_partition;
 		nordic,pm-ext-flash = &gd25q16;
 	};
-
-
-	aliases {
-		mcuboot-button0 = &button0;
-	};
 };
-
-
