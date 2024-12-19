@@ -5,9 +5,9 @@ app:
   size: 0xf1e00
 external_flash:
   address: 0xf2000
-  end_address: 0x800000
+  end_address: 0x200000
   region: external_flash
-  size: 0x70e000
+  size: 0x10e000
 mcuboot:
   address: 0x0
   end_address: 0xc000
@@ -28,8 +28,8 @@ mcuboot_primary:
   address: 0xc000
   end_address: 0xfe000
   orig_span: &id001
-  - mcuboot_pad
   - app
+  - mcuboot_pad
   region: flash_primary
   size: 0xf2000
   span: *id001
