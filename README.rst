@@ -78,105 +78,21 @@ by changing these lines in the ``prj.conf`` configuration file, e.g.:
 
    CONFIG_OPENTHREAD_NETWORKKEY="00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff"
    CONFIG_OPENTHREAD_NETWORK_NAME="golioth-thread"
-
-``CONFIG_OPENTHREAD_CHANNEL`` is set to ``26``.
+   CONFIG_OPENTHREAD_CHANNEL=26
+   CONFIG_OPENTHREAD_PANID=34739
 
 .. pull-quote::
    [!IMPORTANT]
 
-   Make sure the Thread Network Name, Thread Network Key and Thread Channel
-   match your Border Router configuration.
+   Make sure the Thread Network Name, Thread Network Key, Thread Channel and
+   Thread PAN ID match your Border Router configuration.
 
-Add Pipeline to Golioth
-***********************
-
-Golioth uses `Pipelines`_ to route stream data. This gives you flexibility to change your data
-routing without requiring updated device firmware.
-
-Whenever sending stream data, you must enable a pipeline in your Golioth project to configure how
-that data is handled. Add the contents of ``pipelines/cbor-to-lightdb.yml`` as a new pipeline as
-follows (note that this is the default pipeline for new projects and may already be present):
-
-   1. Navigate to your project on the Golioth web console.
-   2. Select ``Pipelines`` from the left sidebar and click the ``Create`` button.
-   3. Give your new pipeline a name and paste the pipeline configuration into the editor.
-   4. Click the toggle in the bottom right to enable the pipeline and then click ``Create``.
-
-All data streamed to Golioth in CBOR format will now be routed to LightDB Stream and may be viewed
-using the web console. You may change this behavior at any time without updating firmware simply by
-editing this pipeline entry.
-
-Golioth Features
-****************
-
-Supported Golioth Zephyr SDK Features
-=====================================
-
-This firmware implements the following features from the Golioth Zephyr SDK:
-
-- `Device Settings Service <https://docs.golioth.io/firmware/zephyr-device-sdk/device-settings-service>`_
-- `LightDB State Client <https://docs.golioth.io/firmware/zephyr-device-sdk/light-db/>`_
-- `LightDB Stream Client <https://docs.golioth.io/firmware/zephyr-device-sdk/light-db-stream/>`_
-- `Logging Client <https://docs.golioth.io/firmware/zephyr-device-sdk/logging/>`_
-- `Over-the-Air (OTA) Firmware Upgrade <https://docs.golioth.io/firmware/device-sdk/firmware-upgrade>`_
-- `Remote Procedure Call (RPC) <https://docs.golioth.io/firmware/zephyr-device-sdk/remote-procedure-call>`_
-
-Device Settings Service
------------------------
-
-The following settings should be set in the Device Settings menu of the
-`Golioth Console`_.
-
-``LOOP_DELAY_S``
-   Adjusts the delay between sensor readings. Set to an integer value (seconds).
-
-   Default value is ``60`` seconds.
-
-LightDB Stream Service
-----------------------
-
-An up-counting timer is periodically sent to the ``sensor/counter`` endpoint of the
-LightDB Stream service to simulate sensor data.
-
-LightDB State Service
----------------------
-
-The concept of Digital Twin is demonstrated with the LightDB State
-``example_int0`` and ``example_int1`` variables that are members of the ``desired``
-and ``state`` endpoints.
-
-* ``desired`` values may be changed from the cloud side. The device will recognize
-  these, validate them for [0..65535] bounding, and then reset these endpoints
-  to ``-1``
-
-* ``state`` values will be updated by the device whenever a valid value is
-  received from the ``desired`` endpoints. The cloud may read the ``state``
-  endpoints to determine device status, but only the device should ever write to
-  the ``state`` endpoints.
-
-Remote Procedure Call (RPC) Service
------------------------------------
-
-The following RPCs can be initiated in the Remote Procedure Call menu of the
-`Golioth Console`_.
-
-``reboot``
-   Reboot the system.
-
-``set_log_level``
-   Set the log level.
-
-   The method takes a single parameter which can be one of the following integer
-   values:
-
-   * ``0``: ``LOG_LEVEL_NONE``
-   * ``1``: ``LOG_LEVEL_ERR``
-   * ``2``: ``LOG_LEVEL_WRN``
-   * ``3``: ``LOG_LEVEL_INF``
-   * ``4``: ``LOG_LEVEL_DBG``
 
 Local set up
 ************
+
+.. pull-quote::
+   [!IMPORTANT]
 
 Do not clone this repo using git. Zephyr's ``west`` meta tool should be used to
 set up your local workspace.
@@ -206,17 +122,142 @@ Use ``west`` to initialize the workspace and install dependencies
 Building the application
 ************************
 
-Build the Zephyr sample application from the top-level workspace of your project.
-After a successful build you will see a new ``build/`` directory.
+Build the Zephyr sample application for the `Nordic nRF52840 DK`_
+(``nrf52840dk_nrf52840``) from the top level of your project. After a
+successful build you will see a new ``build`` directory. Note that any changes
+(and git commits) to the project itself will be inside the ``app`` folder. The
+``build`` and ``deps`` directories being one level higher prevents the repo from
+cataloging all of the changes to the dependencies and the build (so no
+``.gitignore`` is needed).
 
-Note that this git repository was cloned into the ``app`` folder, so any changes
-you make to the application itself should be committed inside this repository.
-The ``build`` and ``deps`` directories in the root of the workspace are managed
-outside of this git repository by the ``west`` meta-tool.
+Prior to building, update ``VERSION`` file to reflect the firmware version number you want to assign
+to this build. Then run the following commands to build and program the firmware onto the device.
+
+
+.. pull-quote::
+   [!IMPORTANT]
+
+   You must perform a pristine build (use ``-p`` or remove the ``build`` directory)
+   after changing the firmware version number in the ``VERSION`` file for the change to take effect.
+
 .. code-block:: text
 
+   $ (.venv) west build -p -b nrf52840dk/nrf52840 --sysbuild app
+   $ (.venv) west flash
+
+Configure PSK-ID and PSK using the device shell based on your Golioth
+credentials and reboot:
+
 .. code-block:: text
 
+   uart:~$ settings set golioth/psk-id <my-psk-id@my-project>
+   uart:~$ settings set golioth/psk <my-psk>
+   uart:~$ kernel reboot cold
+
+Add Pipeline to Golioth
+***********************
+
+Golioth uses `Pipelines`_ to route stream data. This gives you flexibility to change your data
+routing without requiring updated device firmware.
+
+Whenever sending stream data, you must enable a pipeline in your Golioth project to configure how
+that data is handled. Add the contents of ``pipelines/cbor-to-lightdb.yml`` as a new pipeline as
+follows (note that this is the default pipeline for new projects and may already be present):
+
+   1. Navigate to your project on the Golioth web console.
+   2. Select ``Pipelines`` from the left sidebar and click the ``Create`` button.
+   3. Give your new pipeline a name and paste the pipeline configuration into the editor.
+   4. Click the toggle in the bottom right to enable the pipeline and then click ``Create``.
+
+All data streamed to Golioth in CBOR format will now be routed to LightDB Stream and may be viewed
+using the web console. You may change this behavior at any time without updating firmware simply by
+editing this pipeline entry.
+
+Golioth Features
+****************
+
+This app currently implements Over-the-Air (OTA) firmware updates, Settings
+Service, Logging, RPC, and both LightDB State and LightDB Stream data.
+
+Settings Service
+----------------
+
+The following settings should be set in the Device Settings menu of the
+`Golioth Console`_.
+
+``LOOP_DELAY_S``
+   Adjusts the delay between sensor readings. Set to an integer value (seconds).
+
+   Default value is ``60`` seconds.
+
+Remote Procedure Call (RPC) Service
+-----------------------------------
+
+The following RPCs can be initiated in the Remote Procedure Call menu of the
+`Golioth Console`_.
+
+``reboot``
+   Reboot the system.
+
+``set_log_level``
+   Set the log level.
+
+   The method takes a single parameter which can be one of the following integer
+   values:
+
+   * ``0``: ``LOG_LEVEL_NONE``
+   * ``1``: ``LOG_LEVEL_ERR``
+   * ``2``: ``LOG_LEVEL_WRN``
+   * ``3``: ``LOG_LEVEL_INF``
+   * ``4``: ``LOG_LEVEL_DBG``
+
+LightDB State and LightDB Stream data
+=====================================
+
+Time-Series Data (LightDB Stream)
+---------------------------------
+
+An up-counting timer is periodically sent to the ``sensor/counter`` endpoint of the
+LightDB Stream service to simulate sensor data.
+
+Stateful Data (LightDB State)
+-----------------------------
+
+The concept of Digital Twin is demonstrated with the LightDB State
+``example_int0`` and ``example_int1`` variables that are members of the ``desired``
+and ``state`` endpoints.
+
+* ``desired`` values may be changed from the cloud side. The device will recognize
+  these, validate them for [0..65535] bounding, and then reset these endpoints
+  to ``-1``
+
+* ``state`` values will be updated by the device whenever a valid value is
+  received from the ``desired`` endpoints. The cloud may read the ``state``
+  endpoints to determine device status, but only the device should ever write to
+  the ``state`` endpoints.
+
+Further Information in Header Files
+===================================
+
+Please refer to the comments in each header file for a service-by-service
+explanation of this template.
+
+Hardware Variations
+*******************
+
+This reference design may be built for a variety of different boards.
+
+Prior to building, update ``VERSION`` file to reflect the firmware version number you want to assign
+to this build. Then run the following commands to build and program the firmware onto the device.
+
+Adafruit Feather nRF52840 Express
+=================================
+
+This reference design may be built for the Golioth Aludel Mini board.
+
+.. code-block:: text
+
+   $ (.venv) west build -p -b adafruit_feather/nrf52840 --sysbuild app
    $ (.venv) west flash
 
 OTA Firmware Update
@@ -231,24 +272,6 @@ This application includes the ability to perform Over-the-Air (OTA) firmware upd
 3. Create and roll out a release based on this artifact.
 
 Visit `the Golioth Docs OTA Firmware Upgrade page`_ for more info.
-
-External Libraries
-******************
-
-In order for the device to securely authenticate with the Golioth Cloud, we need
-to provision the device with a pre-shared key (PSK). This key will persist
-across reboots and only needs to be set once after the device firmware has been
-programmed. In addition, flashing new firmware images with ``west flash`` should
-not erase these stored settings unless the entire device flash is erased.
-
-Configure the PSK-ID and PSK using the device UART shell and reboot the device:
-
-.. code-block:: text
-
-   uart:~$ settings set golioth/psk-id <my-psk-id@my-project>
-   uart:~$ settings set golioth/psk <my-psk>
-   uart:~$ kernel reboot cold
-
 
 Pulling in updates from the Reference Design Template
 *****************************************************
