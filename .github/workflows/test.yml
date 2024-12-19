@@ -7,11 +7,18 @@ on:
   pull_request:
 
   push:
+    branches: [ main ]
 
 jobs:
-  test_build:
+  test_build_nrf52840dk:
     uses: ./.github/workflows/build_zephyr.yml
     with:
       ZEPHYR_SDK: 0.16.3
-      BOARD: nrf52840dk_nrf52840
+      BOARD: nrf52840dk/nrf52840
+      ARTIFACT: false
+  test_build_adafruit_feather_nrf52840:
+    uses: ./.github/workflows/build_zephyr.yml
+    with:
+      ZEPHYR_SDK: 0.16.3
+      BOARD: adafruit_feather_nrf52840
       ARTIFACT: false

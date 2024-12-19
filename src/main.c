@@ -7,6 +7,7 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth_openthread_demo, LOG_LEVEL_DBG);
 
+#include <app_version.h>
 #include "app_rpc.h"
 #include "app_settings.h"
 #include "app_state.h"
@@ -16,6 +17,8 @@ LOG_MODULE_REGISTER(golioth_openthread_demo, LOG_LEVEL_DBG);
 #include <openthread/thread.h>
 #include <samples/common/net_connect.h>
 #include <samples/common/sample_credentials.h>
+#include <zephyr/kernel.h>
+
 #include <zephyr/drivers/gpio.h>
 #include "zephyr/kernel.h"
 #include <zephyr/net/coap.h>
@@ -23,8 +26,9 @@ LOG_MODULE_REGISTER(golioth_openthread_demo, LOG_LEVEL_DBG);
 #include <zephyr/net/socket.h>
 #include "zephyr/sys/util_macro.h"
 
-/* Current firmware version; update in prj.conf or via build argument */
-static const char *_current_version = CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION;
+/* Current firmware version; update in VERSION */
+static const char *_current_version =
+    STRINGIFY(APP_VERSION_MAJOR) "." STRINGIFY(APP_VERSION_MINOR) "." STRINGIFY(APP_PATCHLEVEL);
 
 static struct golioth_client *client;
 K_SEM_DEFINE(connected, 0, 1);
@@ -154,7 +158,7 @@ void golioth_connection_led_set(uint8_t state)
 	gpio_pin_set_dt(&golioth_led, pin_state);
 #endif /* #if DT_NODE_EXISTS(DT_ALIAS(golioth_led)) */
 	/* Change the state of the Golioth LED on Ostentus */
-	IF_ENABLED(CONFIG_LIB_OSTENTUS, (led_golioth_set(pin_state);));
+	IF_ENABLED(CONFIG_LIB_OSTENTUS, (ostentus_led_golioth_set(o_dev, pin_state);));
 }
 
 
@@ -172,7 +176,7 @@ int main(void)
 		openthread_start(openthread_get_default_context());
 	));
 
-	LOG_INF("Firmware version: %s", CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION);
+	LOG_INF("Firmware version: %s", _current_version);
 
 	/* Get system thread id so loop delay change event can wake main */
 	_system_thread = k_current_get();
