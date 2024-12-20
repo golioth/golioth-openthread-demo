@@ -55,7 +55,7 @@ This firmware can be built for a variety of supported hardware platforms.
    * - Development Board
      - Zephyr Board
 
-   * - .. image:: images/Adafurit_nRF52840_Feather.png
+   * - .. image:: images/Adafruit_nRF52840_Feather.png
           :width: 240
      - ``adafruit_feather_nrf52840``
 
@@ -253,11 +253,11 @@ to this build. Then run the following commands to build and program the firmware
 Adafruit Feather nRF52840 Express
 =================================
 
-This reference design may be built for the Golioth Aludel Mini board.
+This reference design may be built for the Adafruit Feather nRF52840 Express board.
 
 .. code-block:: text
 
-   $ (.venv) west build -p -b adafruit_feather/nrf52840 --sysbuild app
+   $ (.venv) west build -p -b adafruit_feather_nrf52840/nrf52840 --sysbuild app
    $ (.venv) west flash
 
 OTA Firmware Update
