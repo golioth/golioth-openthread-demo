@@ -8,16 +8,28 @@ Golioth OpenThread Demo
 This repository contains the firmware source code and `pre-built release
 firmware images <releases_>`_ for the Golioth OpenThread Demo.
 
-The full project details are available on the `Golioth Thread Demo Project Page`_.
+The full project details are available on the `Golioth Thread Demo Project Page`_,
+including follow-along guides for building the Reference Design yourself using
+widely available off-the-shelf development boards.
 
+We call this **Follow-Along Hardware**, and we think it's one of the quickest
+and easiest ways to get started building an IoT proof-of-concept with Golioth.
+In the follow-along guides, you will learn how to assemble the hardware, flash a
+pre-built firmware image onto the device, and connect to the Golioth cloud in
+minutes.
+
+Once you have completed a follow-along guide for one of our supported hardware
+platforms, the instructions below will walk you through how to build and
+configure the firmware yourself.
 
 Requirements
 ************
 
-- Golioth device PSK credentials
-- A running Thread Border Router with NAT64 translation (we will be using the
+* Golioth device PSK credentials
+* A running Thread Border Router with NAT64 translation (we will be using the
   commercially available off-the-shelf `GL-S200 Thread Border Router`_)
-- Thread Network Name and Network Key
+* Thread Network Name and Network Key
+
 .. pull-quote::
    [!IMPORTANT]
 
@@ -61,6 +73,7 @@ This firmware can be built for a variety of supported hardware platforms.
 
 Firmware Overview
 *****************
+
 This is a Reference Design for a Thread Protocol enabled device using Zephyr
 and connecting to Golioth over IPv6.
 
@@ -180,7 +193,7 @@ This app currently implements Over-the-Air (OTA) firmware updates, Settings
 Service, Logging, RPC, and both LightDB State and LightDB Stream data.
 
 Settings Service
-----------------
+================
 
 The following settings should be set in the Device Settings menu of the
 `Golioth Console`_.
@@ -191,7 +204,7 @@ The following settings should be set in the Device Settings menu of the
    Default value is ``60`` seconds.
 
 Remote Procedure Call (RPC) Service
------------------------------------
+===================================
 
 The following RPCs can be initiated in the Remote Procedure Call menu of the
 `Golioth Console`_.
@@ -306,11 +319,10 @@ recommend the following workflow to pull in future changes:
    git commit
 
 .. _Golioth Console: https://console.golioth.io
+.. _releases: https://github.com/golioth/golioth-openthread-demo/releases
 .. _GL-S200 Thread Border Router: https://www.gl-inet.com/products/gl-s200/
+.. _Pipelines: https://docs.golioth.io/data-routing
 .. _Nordic nRF52840 DK: https://www.nordicsemi.com/Products/Development-hardware/nRF52840-DK
+.. _the Golioth Docs OTA Firmware Upgrade page: https://docs.golioth.io/firmware/golioth-firmware-sdk/firmware-upgrade/firmware-upgrade
 .. _Golioth Thread Demo Project Page: https://projects.golioth.io/reference-designs/openthread-demo/
-.. _releases: https://github.com/golioth/
-.. _Zephyr Getting Started Guide: https://docs.zephyrproject.org/latest/develop/getting_started/
-.. _Developer Training: https://training.golioth.io
-.. _SemVer: https://semver.org
 .. _Reference Design Template: https://github.com/golioth/reference-design-template
