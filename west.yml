@@ -7,7 +7,7 @@ manifest:
   projects:
     - name: golioth
       path: modules/lib/golioth-firmware-sdk
-      revision: v0.13.1
+      revision: v0.16.0
       url: https://github.com/golioth/golioth-firmware-sdk.git
       west-commands: scripts/west-commands.yml
       submodules: true
@@ -25,7 +25,7 @@ manifest:
           - net-tools
           - nrfxlib
           - openthread
-          - qcbor
+          - oberon-psa-crypto
           - segger
           - tfm-mcuboot
           - tinycrypt

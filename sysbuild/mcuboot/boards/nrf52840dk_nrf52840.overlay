@@ -6,16 +6,8 @@
 
 / {
 	chosen {
-		zephyr,entropy = &rng;
+		nordic,code-partition = &boot_partition;
 		nordic,pm-ext-flash = &mx25r64;
 	};
-
-	aliases {
-		golioth-led = &led1;
-		user-btn = &button0;
-	};
 };
 
-&uart0 {
-	status = "okay";
-};

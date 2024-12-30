@@ -310,13 +310,12 @@ void log_battery_data(void)
 	LOG_INF("Battery measurement: voltage=%s, level=%s", get_batt_v_str(), get_batt_lvl_str());
 }
 
-static void async_error_handler(struct golioth_client *client,
-				const struct golioth_response *response,
-				const char *path,
+static void async_error_handler(struct golioth_client *client, enum golioth_status status,
+				const struct golioth_coap_rsp_code *coap_rsp_code, const char *path,
 				void *arg)
 {
-	if (response->status != GOLIOTH_OK) {
-		LOG_ERR("Failed to stream battery data: %d", response->status);
+	if (status != GOLIOTH_OK) {
+		LOG_ERR("Failed to stream battery data: %d", status);
 		return;
 	}
 }
@@ -333,13 +332,8 @@ int stream_battery_data(struct golioth_client *client, struct battery_data *batt
 		 batt_data->battery_level_pptt % 100);
 	LOG_DBG("%s", json_buf);
 
-	err = golioth_stream_set_async(client,
-				       stream_endpoint,
-				       GOLIOTH_CONTENT_TYPE_JSON,
-				       json_buf,
-				       strlen(json_buf),
-				       async_error_handler,
-				       NULL);
+	err = golioth_stream_set_async(client, stream_endpoint, GOLIOTH_CONTENT_TYPE_JSON, json_buf,
+				       strlen(json_buf), async_error_handler, NULL);
 	if (err) {
 		LOG_ERR("Failed to send battery data to Golioth: %d", err);
 	}
@@ -371,6 +365,8 @@ int read_and_report_battery(struct golioth_client *client)
 			LOG_ERR("Error streaming battery info");
 			return err;
 		}
+	} else {
+		LOG_DBG("No connection available, skipping streaming battery info");
 	}
 
 	return 0;
