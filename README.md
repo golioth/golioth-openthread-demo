@@ -1,176 +1,51 @@
 # Golioth OpenThread Demo
 
+This Golioth OpenThread Demo is a Reference Design for a Thread Protocol
+enabled device using Zephyr and connecting to Golioth over IPv6.
+
+Devices using the Thread protocol work with Golioth thanks to the
+internet connection available through a border router. This example
+application shows how to flash and provision a Thread device. Once
+connected it will periodically stream an up-counting timer value to the
+cloud to simulate time-series sensors data. The device may be controlled
+from the Golioth web console to adjust settings (like the frequency of
+sensor readings), issue RPCs, remotely view device logs, and deploy
+Over-the-Air firmware updates (OTA).
+
+Business use cases and hardware build details are available on [the
+Golioth Thread Demo Project
+Page](https://projects.golioth.io/reference-designs/openthread-demo/).
+
 This repository contains the firmware source code and [pre-built release
 firmware
-images](https://github.com/golioth/golioth-openthread-demo/releases) for
-the Golioth OpenThread Demo.
-
-The full project details are available on the [Golioth Thread Demo
-Project
-Page](https://projects.golioth.io/reference-designs/openthread-demo/),
-including follow-along guides for building the Reference Design yourself
-using widely available off-the-shelf development boards.
-
-We call this **Follow-Along Hardware**, and we think it's one of the
-quickest and easiest ways to get started building an IoT
-proof-of-concept with Golioth. In the follow-along guides, you will
-learn how to assemble the hardware, flash a pre-built firmware image
-onto the device, and connect to the Golioth cloud in minutes.
-
-Once you have completed a follow-along guide for one of our supported
-hardware platforms, the instructions below will walk you through how to
-build and configure the firmware yourself.
-
-## Requirements
-
-  - Golioth device PSK credentials
-  - A running Thread Border Router with NAT64 translation (we will be
-    using the commercially available off-the-shelf [GL-S200 Thread
-    Border Router](https://www.gl-inet.com/products/gl-s200/))
-  - Thread Network Name and Network Key
-
-> Do not clone this repo using git. Zephyr's `west` meta tool should be
-> used to set up your local workspace.
+images](https://github.com/golioth/golioth-openthread-demo/releases).
 
 ## Supported Hardware
 
-This firmware can be built for a variety of supported hardware
-platforms.
+- Nordic nRF52840-DK
+- Adafruit Feather nRF52840 Express
+### Additional Sensors/Components
 
-> In Zephyr, each of these different hardware variants is given a unique
-> "board" identifier, which is used by the build system to generate
-> firmware for that variant.
->
-> When building firmware using the instructions below, make sure to use
-> the correct Zephyr board identifier that corresponds to your hardware
-> platform.
-
-| Development Borad                | Zephyr Board          |
-| -------------------------------- | --------------------- |
-| ![image](images/nRF52840_DK.png) | `nrf52840dk_nrf52840` |
-
-**Nordic Semiconductor Hardware**
-
-| Development Board                              | Zephyr Board                |
-| ---------------------------------------------- | --------------------------- |
-| ![image](images/Adafruit_nRF52840_Feather.png) | `adafruit_feather_nrf52840` |
-
-**Adafruit Hardware**
-
-## Firmware Overview
-
-This is a Reference Design for a Thread Protocol enabled device using
-Zephyr and connecting to Golioth over IPv6.
-
-### Configure `prj.conf`
-
-Configure the following Kconfig options:
-
-  - OPENTHREAD\_NETWORK\_NAME - Name of your Thread network
-  - OPENTHREAD\_NETWORKKEY - Network Key of your Thread network
-
-by changing these lines in the `prj.conf` configuration file, e.g.:
-
-``` cfg
-CONFIG_OPENTHREAD_NETWORKKEY="00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff"
-CONFIG_OPENTHREAD_NETWORK_NAME="golioth-thread"
-CONFIG_OPENTHREAD_CHANNEL=26
-CONFIG_OPENTHREAD_PANID=34739
-```
-
-> Make sure the Thread Network Name, Thread Network Key, Thread Channel
-> and Thread PAN ID match your Border Router configuration.
-
-## Local set up
-
->
-
-Do not clone this repo using git. Zephyr's `west` meta tool should be
-used to set up your local workspace.
-
-### Install the Python virtual environment (recommended)
-
-``` shell
-cd ~
-mkdir golioth-openthread-demo
-python -m venv golioth-openthread-demo/.venv
-source golioth-openthread-demo/.venv/bin/activate
-pip install wheel west
-```
-
-### Use `west` to initialize the workspace and install dependencies
-
-``` console
-cd ~/golioth-openthread-demo
-west init -m git@github.com:golioth/golioth-openthread-demo.git .
-west update
-west zephyr-export
-pip install -r deps/zephyr/scripts/requirements.txt
-```
-
-## Building the application
-
-Build the Zephyr sample application for the [Nordic nRF52840
-DK](https://www.nordicsemi.com/Products/Development-hardware/nRF52840-DK)
-(`nrf52840dk_nrf52840`) from the top level of your project. After a
-successful build you will see a new `build` directory. Note that any
-changes (and git commits) to the project itself will be inside the `app`
-folder. The `build` and `deps` directories being one level higher
-prevents the repo from cataloging all of the changes to the dependencies
-and the build (so no `.gitignore` is needed).
-
-Prior to building, update `VERSION` file to reflect the firmware version
-number you want to assign to this build. Then run the following commands
-to build and program the firmware onto the device.
-
-> You must perform a pristine build (use `-p` or remove the `build`
-> directory) after changing the firmware version number in the `VERSION`
-> file for the change to take effect.
-
-``` text
-$ (.venv) west build -p -b nrf52840dk/nrf52840 --sysbuild app
-$ (.venv) west flash
-```
-
-Configure PSK-ID and PSK using the device shell based on your Golioth
-credentials and reboot:
-
-``` text
-uart:~$ settings set golioth/psk-id <my-psk-id@my-project>
-uart:~$ settings set golioth/psk <my-psk>
-uart:~$ kernel reboot cold
-```
-
-## Add Pipeline to Golioth
-
-Golioth uses [Pipelines](https://docs.golioth.io/data-routing) to route
-stream data. This gives you flexibility to change your data routing
-without requiring updated device firmware.
-
-Whenever sending stream data, you must enable a pipeline in your Golioth
-project to configure how that data is handled. Add the contents of
-`pipelines/cbor-to-lightdb.yml` as a new pipeline as follows (note that
-this is the default pipeline for new projects and may already be
-present):
-
-1.  Navigate to your project on the Golioth web console.
-2.  Select `Pipelines` from the left sidebar and click the `Create`
-    button.
-3.  Give your new pipeline a name and paste the pipeline configuration
-    into the editor.
-4.  Click the toggle in the bottom right to enable the pipeline and
-    then click `Create`.
-
-All data streamed to Golioth in CBOR format will now be routed to
-LightDB Stream and may be viewed using the web console. You may change
-this behavior at any time without updating firmware simply by editing
-this pipeline entry.
+  - A running Thread Border Router with NAT64 translation (we will be
+    using the commercially available off-the-shelf [GL-S200 Thread
+    Border Router](https://www.gl-inet.com/products/gl-s200/)).
 
 ## Golioth Features
 
-This app currently implements Over-the-Air (OTA) firmware updates,
-Settings Service, Logging, RPC, and both LightDB State and LightDB
-Stream data.
+This app implements:
+
+  - [Device Settings
+    Service](https://docs.golioth.io/firmware/golioth-firmware-sdk/device-settings-service)
+  - [Remote Procedure Call
+    (RPC)](https://docs.golioth.io/firmware/golioth-firmware-sdk/remote-procedure-call)
+  - [Stream
+    Client](https://docs.golioth.io/firmware/golioth-firmware-sdk/stream-client)
+  - [LightDB State
+    Client](https://docs.golioth.io/firmware/golioth-firmware-sdk/light-db-state/)
+  - [Over-the-Air (OTA) Firmware
+    Upgrade](https://docs.golioth.io/firmware/golioth-firmware-sdk/firmware-upgrade/firmware-upgrade)
+  - [Backend
+    Logging](https://docs.golioth.io/device-management/logging/)
 
 ### Settings Service
 
@@ -203,39 +78,189 @@ the [Golioth Console](https://console.golioth.io).
       - `3`: `LOG_LEVEL_INF`
       - `4`: `LOG_LEVEL_DBG`
 
-### LightDB State and LightDB Stream data
+### Time-Series Stream data
 
-#### Time-Series Data (LightDB Stream)
+Sensor readings are simulated using an up-counting timer. The value is
+periodically sent to the `sensor/counter` path of the Golioth Stream
+service.
 
-An up-counting timer is periodically sent to the `sensor/counter`
-endpoint of the LightDB Stream service to simulate sensor data.
+``` json
+{
+  "counter": 1
+}
+```
 
-#### Stateful Data (LightDB State)
+> [!NOTE]
+> Your Golioth project must have a Pipeline enabled to receive this
+> data. See the [Add Pipeline to Golioth](#add-pipeline-to-golioth)
+> section below.
+
+### Stateful Data (LightDB State)
 
 The concept of Digital Twin is demonstrated with the LightDB State
-`example_int0` and `example_int1` variables that are members of the
-`desired` and `state` endpoints.
+`example_int0` and `example_int1` variables that are subpaths of the
+`desired` and `state` paths.
 
   - `desired` values may be changed from the cloud side. The device will
     recognize these, validate them for \[0..65535\] bounding, and then
-    reset these endpoints to `-1`
-  - `state` values will be updated by the device whenever a valid value
-    is received from the `desired` endpoints. The cloud may read the
-    `state` endpoints to determine device status, but only the device
+    reset these values to `-1`
+  - `state` values will be updated by the device to reflect the device's
+    actual stored value. The cloud may read the `state` endpoints to
+    determine device status. In this arrangement, only the device
     should ever write to the `state` endpoints.
 
-### Further Information in Header Files
+``` json
+{
+  "desired": {
+    "example_int0": -1,
+    "example_int1": -1
+  },
+  "state": {
+    "example_int0": 0,
+    "example_int1": 1
+  }
+}
+```
 
-Please refer to the comments in each header file for a
-service-by-service explanation of this template.
+By default the state values will be `0` and `1`. Try updating the
+`desired` values and observe how the device updates its state.
 
-## Hardware Variations
+### OTA Firmware Update
 
-This reference design may be built for a variety of different boards.
+This application includes the ability to perform Over-the-Air (OTA)
+firmware updates. To do so, you need a binary compiled with a different
+version number than what is currently running on the device.
+
+> [!NOTE]
+> If a newer release is available than what your device is currently
+> running, you may download the pre-compiled binary that ends in
+> `_update.bin` and use it in step 2 below.
+
+1. Update the version number in the `VERSION` file and perform a
+   pristine (important) build to incorporate the version change.
+2. Upload the `build/app/zephyr/zephyr.signed.bin` file as a Package for
+   your Golioth project.
+
+   - Use `main` as the package name.
+   - Use the same version number from step 1.
+
+3. Create a Cohort and add your device to it.
+4. Create a Deployment for your Cohort using the package name and
+   version number from step 2.
+5. Devices in your Cohort will automatically upgrade to the most
+   recently deployed firmware.
+
+Visit [the Golioth Docs OTA Firmware Upgrade
+page](https://docs.golioth.io/firmware/golioth-firmware-sdk/firmware-upgrade/firmware-upgrade)
+for more info.
+
+## Add Pipeline to Golioth
+
+Golioth uses [Pipelines](https://docs.golioth.io/data-routing) to route
+stream data. This gives you flexibility to change your data routing
+without requiring updated device firmware.
+
+Whenever sending stream data, you must enable a pipeline in your Golioth
+project to configure how that data is handled. Add the contents of
+`pipelines/cbor-to-lightdb.yml` as a new pipeline as follows (note that
+this is the default pipeline for new projects and may already be
+present):
+
+1.  Navigate to your project on the Golioth web console.
+2.  Select `Pipelines` from the left sidebar and click the `Create`
+    button.
+3.  Give your new pipeline a name and paste the pipeline configuration
+    into the editor.
+4.  Click the toggle in the bottom right to enable the pipeline and
+    then click `Create`.
+
+All data streamed to Golioth in CBOR format will now be routed to
+LightDB Stream and may be viewed using the web console. You may change
+this behavior at any time without updating firmware simply by editing
+this pipeline entry.
+
+## Local set up
+
+> [!IMPORTANT]
+> Do not clone this repo using git. Zephyr's `west` meta tool should be
+> used to set up your local workspace.
+
+### Install the Python virtual environment (recommended)
+
+``` shell
+cd ~
+mkdir golioth-openthread-demo
+python -m venv golioth-openthread-demo/.venv
+source golioth-openthread-demo/.venv/bin/activate
+pip install wheel west ecdsa
+```
+
+### Use `west` to initialize and install
+
+``` shell
+cd ~/golioth-openthread-demo
+west init -m git@github.com:golioth/golioth-openthread-demo.git .
+west update
+west zephyr-export
+pip install -r deps/zephyr/scripts/requirements.txt
+```
+
+## Configure `prj.conf`
+
+Configure the following Kconfig options:
+
+  - `OPENTHREAD_NETWORK_NAME`: Name of your Thread network
+  - `OPENTHREAD_NETWORKKEY`: Network Key of your Thread network
+
+by changing these lines in the `prj.conf` configuration file, e.g.:
+
+``` cfg
+CONFIG_OPENTHREAD_NETWORKKEY="00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff"
+CONFIG_OPENTHREAD_NETWORK_NAME="golioth-thread"
+CONFIG_OPENTHREAD_CHANNEL=26
+CONFIG_OPENTHREAD_PANID=34739
+```
+
+> [!NOTE]
+> Make sure the Thread Network Name, Thread Network Key, Thread Channel
+> and Thread PAN ID match your Border Router configuration.
+
+## Building the application
+
+Build the Zephyr sample application for the [Nordic nRF52840
+DK](https://www.nordicsemi.com/Products/Development-hardware/nRF52840-DK)
+(`nrf52840dk_nrf52840`) from the top level of your project. After a
+successful build you will see a new `build` directory. Note that any
+changes (and git commits) to the project itself will be inside the `app`
+folder. The `build` and `deps` directories being one level higher
+prevents the repo from cataloging all of the changes to the dependencies
+and the build (so no `.gitignore` is needed).
 
 Prior to building, update `VERSION` file to reflect the firmware version
 number you want to assign to this build. Then run the following commands
 to build and program the firmware onto the device.
+
+> [!WARNING]
+> You must perform a pristine build (use `-p` or remove the `build`
+> directory) after changing the firmware version number in the `VERSION`
+> file for the change to take effect.
+
+``` text
+$ (.venv) west build -p -b nrf52840dk/nrf52840 --sysbuild app
+$ (.venv) west flash
+```
+
+Configure PSK-ID and PSK using the device shell based on your Golioth
+credentials and reboot:
+
+``` text
+uart:~$ settings set golioth/psk-id <my-psk-id@my-project>
+uart:~$ settings set golioth/psk <my-psk>
+uart:~$ kernel reboot cold
+```
+
+## Hardware Variations
+
 
 ### Adafruit Feather nRF52840 Express
 
@@ -247,49 +272,7 @@ $ (.venv) west build -p -b adafruit_feather_nrf52840/nrf52840 --sysbuild app
 $ (.venv) west flash
 ```
 
-## OTA Firmware Update
+## Have Questions?
 
-This application includes the ability to perform Over-the-Air (OTA)
-firmware updates:
-
-1.  Update the version number in the
-    <span class="title-ref">VERSION</span> file and perform a pristine
-    (important) build to incorporate the version change.
-2.  Upload the
-    <span class="title-ref">build/app/zephyr/zephyr.signed.bin</span>
-    file as an artifact for your Golioth project using
-    <span class="title-ref">main</span> as the package name.
-3.  Create and roll out a release based on this artifact.
-
-Visit [the Golioth Docs OTA Firmware Upgrade
-page](https://docs.golioth.io/firmware/golioth-firmware-sdk/firmware-upgrade/firmware-upgrade)
-for more info.
-
-## Pulling in updates from the Reference Design Template
-
-This reference design was forked from the [Reference Design
-Template](https://github.com/golioth/reference-design-template) repo. We
-recommend the following workflow to pull in future changes:
-
-  - Setup
-      - Create a `template` remote based on the Reference Design
-        Template repository
-  - Merge in template changes
-      - Fetch template changes and tags
-      - Merge template release tag into your `main` (or other branch)
-      - Resolve merge conflicts (if any) and commit to your repository
-
-``` shell
-# Setup
-git remote add template https://github.com/golioth/reference-design-template.git
-git fetch template --tags
-
-# Merge in template changes
-git fetch template --tags
-git checkout your_local_branch
-git merge template_v1.0.0
-
-# Resolve merge conflicts if necessary
-git add resolved_files
-git commit
-```
+Please get in touch with Golioth engineers by starting a new thread on
+the [Golioth Forum](https://forum.golioth.io/).
