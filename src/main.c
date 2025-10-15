@@ -35,6 +35,8 @@ K_SEM_DEFINE(connected, 0, 1);
 
 static k_tid_t _system_thread = 0;
 
+otInstance *instance;
+
 #if DT_NODE_EXISTS(DT_ALIAS(golioth_led))
 static const struct gpio_dt_spec golioth_led = GPIO_DT_SPEC_GET(DT_ALIAS(golioth_led), gpios);
 static const struct gpio_dt_spec user_btn = GPIO_DT_SPEC_GET(DT_ALIAS(user_btn), gpios);
@@ -110,11 +112,10 @@ static void start_golioth_client(void)
 	app_rpc_register(client);
 }
 
-static void on_thread_state_changed(otChangedFlags flags, struct openthread_context *ot_context,
-				    void *user_data)
+static void on_thread_state_changed(otChangedFlags aFlags, void *aContext)
 {
-	if (flags & OT_CHANGED_THREAD_ROLE) {
-		switch (otThreadGetDeviceRole(ot_context->instance)) {
+	if (aFlags & OT_CHANGED_THREAD_ROLE) {
+		switch (otThreadGetDeviceRole(instance)) {
 		case OT_DEVICE_ROLE_CHILD:
 		case OT_DEVICE_ROLE_ROUTER:
 		case OT_DEVICE_ROLE_LEADER:
@@ -130,13 +131,13 @@ static void on_thread_state_changed(otChangedFlags flags, struct openthread_cont
 		}
 	}
 
-	if (flags == OT_CHANGED_IP6_ADDRESS_ADDED) {
+	if (aFlags == OT_CHANGED_IP6_ADDRESS_ADDED) {
 		start_golioth_client();
 	}
 }
 
-static struct openthread_state_changed_cb ot_state_chaged_cb = {
-	.state_changed_cb = on_thread_state_changed
+static struct openthread_state_changed_callback ot_state_changed_callback = {
+	.otCallback = on_thread_state_changed
 };
 
 void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
@@ -173,8 +174,10 @@ int main(void)
 		k_work_init(&on_connect_work, on_ot_connect);
 		k_work_init(&on_disconnect_work, on_ot_disconnect);
 
-		openthread_state_changed_cb_register(openthread_get_default_context(), &ot_state_chaged_cb);
-		openthread_start(openthread_get_default_context());
+		instance = otInstanceInitSingle();
+
+		openthread_state_changed_callback_register(&ot_state_changed_callback);
+		openthread_run();
 	));
 
 	LOG_INF("Firmware version: %s", _current_version);
