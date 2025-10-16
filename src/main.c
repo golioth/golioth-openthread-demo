@@ -176,6 +176,12 @@ int main(void)
 
 		instance = otInstanceInitSingle();
 
+		/* This is a workaround until Zephyr incorporates upstream openthread changes to get
+		 * the single instance without being passed a pointer */
+		struct openthread_context *ctx = openthread_get_default_context();
+		ctx->instance = instance;
+
+
 		openthread_state_changed_callback_register(&ot_state_changed_callback);
 		openthread_run();
 	));
